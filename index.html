@@ -1,176 +1,390 @@
 <!DOCTYPE html>
 <header>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BigView</title>
+  <link rel="stylesheet" href="css/foundation.css">
+  <link rel="stylesheet" href="css/app.css">
 </header>
 <script src="d3.v3.min.js" charset="utf-8"></script>
 <script src="underscore.js" charset="utf-8"></script>
 
 <script>
+  var colors = ["#a50026", "#d73027", "#f46d43", "#fdae61", "#fee08b", "#ffffbf", "#d9ef8b", "#a6d96a", "#66bd63", "#1a9850", "#006837"]
+  var colors = ["#a50026", "#d73027", "#f46d43", "#fdae61", "#fee08b", "#ffffbf", "#d9ef8b", "#a6d96a", "#66bd63", "#1a9850", "#006837"]
 
-var colors = ["#a50026","#d73027","#f46d43","#fdae61","#fee08b","#ffffbf","#d9ef8b","#a6d96a","#66bd63","#1a9850","#006837"]
-var colors = ["#a50026","#d73027","#f46d43","#fdae61","#fee08b","#ffffbf","#d9ef8b","#a6d96a","#66bd63","#1a9850","#006837"]
-
-function randomArray(length, max) {
+  function randomArray(length, max) {
     return Array.apply(null, Array(length)).map(function(_, i) {
-        return Math.round(Math.random() * max);
+      return Math.round(Math.random() * max);
     });
-}
+  }
 
-var data = {"servers": [
-    {"Name":"Multiproxy1",
-    "CPU": randomArray(100, 100),
-    "bandwidthUP": randomArray(100, 2000),
-    "bandwidthDOWN": randomArray(100, 2000),
-    "Processes": [{
-    "Name":"hola_bridge",
-    "CPU": randomArray(100, 50),
-    "RAM": Math.random()*100
+
+
+
+
+  //The SVG Container
+  var svgContainer = d3.select("body").append("svg")
+    .attr("width", 600)
+    .attr("height", 600);
+
+
+
+  var last_ihours = false
+  var background_painted = false
+  var text_labels
+  var last_hours_positions
+  var existing_arcs = []
+  var previously_itemized_values = []
+
+  var generateBall = function(data, radio, ihours) {
+    // ihours = 24
+
+    if(!background_painted){
+      var circle = svgContainer.append('circle')
+        .attr('id', 'circleBG')
+        .attr('r', radio)
+        .attr('cx', radio)
+        .attr('cy', radio)
+        .attr('fill', '#222222');
+    }
+    background_painted = true
+
+    if(last_ihours != ihours){
+
+        if(ihours == 24){
+          var hours = _.range(24);
+          var hours_positions = _.map(hours, function(hour) {
+            var angle = hour / 24 * 2 * Math.PI;
+            if (hour.toString().length == 1) {
+              hour = '0' + hour
+            }
+            return {
+              cx: -(radio * 0.93) * Math.sin(angle),
+              cy: (radio * 0.95) * Math.cos(angle),
+              text: hour + ':00'
+            }
+          })
+        } else {
+          var num = 12
+          var hours = _.range(num);
+          var minutes = 0
+          var hours_positions = _.map(hours, function(hour) {
+            var angle = hour / num * 2 * Math.PI;
+            var minutes = hour * ( 60 / num )
+            var now = new Date()
+
+            if (minutes.toString().length == 1) {
+              minutes = '0' + minutes
+            }
+            left_hour = ""
+            if (now.getHours().toString().length == 1) {
+              left_hour = "0"
+            }
+
+            return {
+              cx: (radio * 0.93) * Math.sin(angle),
+              cy: -(radio * 0.95) * Math.cos(angle),
+              text: left_hour + now.getHours() + ":" + minutes
+            }
+          })
+        }
+
+      if(last_ihours == false){
+        text_labels = svgContainer.selectAll("text")
+          .data(hours_positions)
+          .enter()
+          .append("text");
+
+        text_labels
+          .attr("x", function(d) {
+            return d.cx;
+          })
+          .attr("y", function(d) {
+            return d.cy;
+          })
+          .text(function(d) {
+            return d.text;
+          })
+          .attr("font-family", "sans-serif")
+          .attr("font-size", (10 / 300 * radio) + "px")
+          .attr("fill", "white")
+          .attr("transform", "translate(" + (radio * 0.95) + "," + (radio * 1.005) + ")");
+
+          last_hours_positions = hours_positions
+
+      } else {
+        if (last_ihours == 1 && ihours == 24){
+          only_hour = []
+          _.each(hours_positions, function(value, index){
+            if(value.text == last_hours_positions[0].text){
+              only_hour.push(value)
+              // found_at_position
+            }
+          })
+        }
+
+        text_labels
+          .data(only_hour)
+          .exit()//.transition()
+          // .duration(1000)
+          //.attr("fill", "black")
+          .remove()
+
+        text_labels
+          .data(only_hour)
+          .transition()
+          .duration(2000)
+          .attr("x", function(d) {
+            return d.cx;
+          })
+          .attr("y", function(d) {
+            return d.cy;
+          })
+          .text(function(d) {
+            if(d!=undefined){
+              return d.text;
+            } else {
+              return 'd.text';
+
+            }
+          })
+
+          new_hours_positions = only_hour
+          _.each(hours_positions, function(each, pos){
+            if (each.text != only_hour[0].text){
+              new_hours_positions.push(each);
+            }
+          })
+
+          text_labels = svgContainer.selectAll("text")
+            .data(new_hours_positions)
+            .enter()
+            .append("text")
+              .attr("x", function(d) {
+                return d.cx;
+              })
+              .attr("y", function(d) {
+                return d.cy;
+              })
+              .text(function(d) {
+                return d.text;
+              })
+              .attr("font-family", "sans-serif")
+              .attr("font-size", (10 / 300 * radio) + "px")
+              .attr("fill", "white")
+              .attr("transform", "translate(" + (radio * 0.95) + "," + (radio * 1.005) + ")");
+      }
+    }
+    last_ihours = ihours
+
+    var divitions = data.length;
+
+    var currentDate = new Date()
+
+    var miliseconds_at_midnight = new Date(currentDate.getUTCFullYear() + '-' + (currentDate.getMonth() + 1) + '-' + currentDate.getDate())
+    var miliseconds_elapsed = currentDate.getTime() - miliseconds_at_midnight.getTime()
+    var percentage_elapsed = miliseconds_elapsed / (1000*60*60*24)
+
+    if(ihours == 1){
+      var miliseconds_at_last_hour = new Date(currentDate.getUTCFullYear() + '-' + (currentDate.getMonth() + 1) + '-' + currentDate.getDate()  + ' '+currentDate.getHours()+':00:00' )
+      var miliseconds_elapsed = currentDate.getTime() - miliseconds_at_midnight.getTime()
+      var percentage_elapsed = miliseconds_elapsed / (1000*60*60)
+    }
+
+    var items = Object.keys(data[0])
+
+    var itemIndex = 0
+
+    var total_values = {}
+    _.map(items, function(item, itemIndex) {
+      console.log(item)
+      itemized_values = []
+      var itemized_data = _.map(data, function(eachdata) {
+        return eachdata[item]
+      })
+      var itemized_data_values = _.map(data, function(eachdata) {
+        return eachdata[item]['value']
+      })
+      var maxVal = d3.max(itemized_data_values),
+        minVal = d3.min(itemized_data_values)
+      var scaleit = d3.scale.linear()
+        .domain([0, maxVal])
+        .range([0, radio*0.90]);
+
+      var pos = 0;
+      for (i = 0; i < 2 * Math.PI; i = i + 2 * Math.PI / divitions) {
+        if (itemized_data[pos] != undefined && typeof(itemized_data[pos]['value']) == 'number') {
+
+          if (total_values[pos] == undefined) {
+            total_values[pos] = 0
+          }
+
+          value = scaleit(itemized_data[pos]['value'])
+          if (value < 0) {
+            value = -1 * value
+          }
+
+          itemized_values.push({
+            "pos": i,
+            "value": value,
+            "previousValue": total_values[pos],
+            "id": itemized_data[pos]['id'],
+            "transparency": 1 - (divitions - pos) / (divitions) + 0.3
+          })
+          total_values[pos] = total_values[pos] + value
+          pos++;
+        }
+      }
+      var to_rotate = - 180 + percentage_elapsed * 360
+      if(ihours == 1){
+        var to_rotate = percentage_elapsed * 360
+      }
+
+      function paint_arcs(itemized_values, radio, to_rotate, itemIndex, redraw, server_name) {
+        var arc = d3.svg.arc()
+          .innerRadius(function(d) {
+            // return d.previousValue
+            return 0;
+          })
+          .outerRadius(function(d) {
+            // return d.previousValue + d.value
+            return d.value;
+            //return 0;
+
+          })
+          .startAngle(function(d) {
+            return d.pos
+          })
+          .endAngle(function(d) {
+            return d.pos + 2 * Math.PI / divitions
+          });
+
+        if(previously_itemized_values[server_name] == null){
+          existing_arcs[server_name] = svgContainer.selectAll("g").data(itemized_values, function(d){return  d.id}).enter().append('path')
+            .attr("d", arc).attr("opacity", function(d) {
+              return d.transparency
+            })
+            .attr("transform", "translate(" + radio + "," + radio + ") rotate(" + to_rotate + ") ")
+            .attr('fill', colors[itemIndex]);
+
+          previously_itemized_values[server_name] = itemized_values
+        } else {
+          existing_arcs[server_name].data(itemized_values, function(d){return  d.id}).transition()
+          .duration(3000)
+          .attr("d", arc).attr("opacity", function(d) {
+            return d.transparency
+          })
+          .attr("transform", "translate(" + radio + "," + radio + ") rotate(" + to_rotate + ") ")
+          .attr('fill', colors[itemIndex]);
+
+          existing_arcs[server_name].data(itemized_values, function(d){return  d.id}).enter().append('path')
+          .attr("d", arc).attr("opacity", function(d) {
+            return d.transparency
+          })
+          .attr("transform", "translate(" + radio + "," + radio + ") rotate(" + to_rotate + ") ")
+          .attr('fill', colors[itemIndex]);
+
+        }
+      }
+
+      console.log('painting arcs: '+itemized_values)
+      paint_arcs(itemized_values, radio, to_rotate, itemIndex, item)
+
+    })
+
+
+
+
+
+  }
+
+
+var user = {name: 'Carlos Guerrero',
+  services:[{
+    name: 'Mediahint',
+    servers: [
+      {
+        longview: '88F48041-B897-A5FB-88B706D42D45A501',
+        pm2: 'holaproxy1'
+      },
+      {
+        longview: '88F48041-B897-A5FB-88B706D42D45A502',
+        pm2: 'holaproxy2'
+      },
+      {
+        longview: '88F48041-B897-A5FB-88B706D42D45A503',
+        pm2: 'holaproxy3'
+      },
+      {
+        longview: '88F48041-B897-A5FB-88B706D42D45A504',
+        pm2: 'holaproxy4'
+      },
+      {
+        longview: '88F48041-B897-A5FB-88B706D42D45A505',
+        pm2: 'holaproxy5'
+      },
+      {
+        longview: '88F48041-B897-A5FB-88B706D42D45A506',
+        pm2: 'holaproxy6'
+      }]
     }]
   }
 
-]}
+  function get_last_hour(){
+    server_list = _.map(user.services[0].servers, function(each){ return each.longview})
+    server_list = ['88F48041-B897-A5FB-88B706D42D45A502', '88F48041-B897-A5FB-88B706D42D45A504']
+    _.each(server_list, function(value, key, list) {
+      servers_logs = []
+      d3.json("http://longview.carlosguerrero.com:8090/get/" + value + "/"+(121), function(err, server_logs) {
+        if(server_logs.length > 100)
+        server_logs.reverse()
+        _.each(server_logs, function(value, key, list) {
+            if (servers_logs[key] == undefined) {
+              servers_logs[key] = {}
+            }
 
+            servers_logs[key][value.apikey] = {value: value.Memory_real_used, id: value.apikey+value.timestamp};
+          })
+          generateBall(servers_logs, 300, 1)
 
-
-//The SVG Container
-var svgContainer = d3.select("body").append("svg")
-                                    .attr("width", 600)
-                                    .attr("height", 600);
-
-
-
-var generateBall = function(data, radio){
-
-  svgContainer.append('circle')
-      .attr('id', 'circleBG')
-      .attr('r', radio)
-      .attr('cx', radio)
-      .attr('cy', radio)
-      .attr('fill', '#222222');
-
-  var divitions = data.length;
-
-  var currentDate = new Date()
-  var miliseconds_at_midnight = new Date(currentDate.getUTCFullYear()+'-'+(currentDate.getMonth()+1)+'-'+currentDate.getDate())
-
-  console.log(miliseconds_at_midnight)
-  var miliseconds_elapsed = currentDate.getTime() - miliseconds_at_midnight.getTime()
-  var percentage_elapsed = miliseconds_elapsed / 86400000
-  console.log(percentage_elapsed)
-
-
-
-
-  var items = _.filter(Object.keys(data[0]), function(each){ return each.indexOf("_") == -1})
-  // console.log(items)
-  var items = ["aut", "car", "cc", "dem", "eol", "gf", "hid", "icb", "inter", "nuc", "sol"]
-  var items = [ "eol", "car","gf", "hid", "inter", "sol", "inter"]
-  // var items = ["hid", "dem", "eol"]
-  var itemIndex = 0
-  var totalValues = {}
-  _.map(items, function(item, itemIndex){
-    itemizedValues = []
-    var itemized_data = _.map(data, function(eachdata){return eachdata[item]})
-    var maxVal = d3.max(itemized_data), minVal = d3.min(itemized_data)
-    var scaleit = d3.scale.linear()
-    .domain([minVal, maxVal])
-    .range([10,30]);
-
-    var pos = 0;
-    for(i=0; i<2*Math.PI ; i=i+2*Math.PI/divitions){
-      if(typeof(itemized_data[pos]) == 'number'){
-
-        if(totalValues[pos] == undefined){
-          totalValues[pos] = 0
-        }
-
-        value = scaleit(itemized_data[pos])
-        if(value<0){
-          value = -1*value
-        }
-
-        itemizedValues.push({"pos":i, "value": value, "previousValue": totalValues[pos], "transparency": 1-(divitions-pos)/divitions+0.3})
-
-        totalValues[pos] = totalValues[pos] + value
-
-        pos++;
-      }
-    }
-
-    var arc = d3.svg.arc()
-        .innerRadius(function(d){return d.previousValue})
-        .outerRadius(function(d){return d.previousValue+d.value})
-        .startAngle(function(d){return d.pos})
-        .endAngle(function(d){return d.pos+2*Math.PI/divitions});
-
-        svgContainer.selectAll("g").data(itemizedValues).enter().append('path')
-            .attr("d", arc).attr("opacity", function(d){return d.transparency})
-.attr("transform", "translate("+radio+","+radio+") rotate("+(180+percentage_elapsed*360)+") ")
-            .attr('fill', colors[itemIndex]);
-
-
-  })
-
-
-
-    var hours = _.range(24);
-    var hours_positions = _.map(hours, function(hour){
-      var angle = hour / 24 * 2 * Math.PI;
-      if(hour.toString().length == 1){
-        hour = '0'+hour
-      }
-      return {cx: -(radio*0.93)*Math.sin(angle), cy: (radio*0.95)*Math.cos(angle), text: hour+':00'}
+      })
     })
+  }
 
-    var text = svgContainer.selectAll("text")
-                          .data(hours_positions)
-                          .enter()
-                          .append("text");
+  function get_last_day(){
+    // server_list = _.map(user.services[0].servers, function(each){ return each.longview})
+    server_list = _.map(user.services[0].servers, function(each){ return each.longview})
+    server_list = ['88F48041-B897-A5FB-88B706D42D45A502', '88F48041-B897-A5FB-88B706D42D45A504']
 
+    _.each(server_list, function(value, key, list) {
+      servers_logs = []
+      d3.json("http://longview.carlosguerrero.com:8090/get/" + value + "/"+(2880), function(err, server_logs) {
+        if(server_logs.length > 100)
+        server_logs.reverse()
+        _.each(server_logs, function(value, key, list) {
+            if (servers_logs[key] == undefined) {
+              servers_logs[key] = {}
+            }
+            servers_logs[key][value.apikey] = {value: value.Memory_real_used, id: value.apikey+value.timestamp};
+          })
+          generateBall(servers_logs, 300, 24)
+      })
+    })
+  }
 
-    var textLabels = text
-                     .attr("x", function(d) { return d.cx; })
-                     .attr("y", function(d) { return d.cy; })
-                     .text( function (d) { return d.text; })
-                     .attr("font-family", "sans-serif")
-                     .attr("font-size", (10/300*radio)+"px")
-                     .attr("fill", "white")
-                     .attr("transform", "translate("+(radio*0.95)+","+(radio*1.005)+")");
-}
-
-d3.json("http://192.168.0.24:8000/last24h.json", function(error, data){
-  data.reverse();
-  generateBall(data, 300)
-
-})
-
-
-
-
-
-
-
-
-// var subdivitions = 60
-// var randomValues = []
-// for(i=0; i<2*Math.PI ; i=i+Math.PI/subdivitions){
-//   randomValues.push([i, 100+Math.round(Math.random() * 100)])
-// }
-//
-// var arc = d3.svg.arc()
-//     .innerRadius(function(d){console.log(d);return d[1]})
-//     .outerRadius(300)
-//     .startAngle(function(d){return d[0]})
-//     .endAngle(function(d){return d[0]+Math.PI/subdivitions});
-//
-// // svgContainer.selectAll("g")
-// //   data(randomValues).enter().
-//
-//
-// svgContainer.selectAll("g").data(randomValues).enter().append('path')
-//     .attr("d", arc).attr("cx", function(){return 120})
-//     .attr("cy", function(){return 30}).attr("transform", "translate(300,300)").
-//     attr('fill', '#BD10E0');
+  window.onload = function(){
+    var button = document.getElementById('change1')
+    button.addEventListener("click", function() {
+      console.log('click action...')
+      get_last_day()
+    })
+    get_last_hour()
+  }
 
 </script>
+
 <body>
+<button id="change1" type="button" class="alert button">24h</button>
 </body>
