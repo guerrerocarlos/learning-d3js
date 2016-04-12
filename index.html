@@ -12,7 +12,7 @@
 
 <script>
   var colors = ["#a50026", "#d73027", "#f46d43", "#fdae61", "#fee08b", "#ffffbf", "#d9ef8b", "#a6d96a", "#66bd63", "#1a9850", "#006837"]
-  var colors = ["#a50026", "#d73027", "#f46d43", "#fdae61", "#fee08b", "#ffffbf", "#d9ef8b", "#a6d96a", "#66bd63", "#1a9850", "#006837"]
+  var colors = ["#a50026", "#d73027", "#f46d43", "#fdae61", "#fee08b", "#ffffbf", "#d9ef8b", "#a6d96a", "#66bd63", "#1a9850", "#a50026"]
 
   function randomArray(length, max) {
     return Array.apply(null, Array(length)).map(function(_, i) {
@@ -41,7 +41,7 @@
   var generateBall = function(data, radio, ihours) {
     // ihours = 24
 
-    if(!background_painted){
+    if (!background_painted) {
       var circle = svgContainer.append('circle')
         .attr('id', 'circleBG')
         .attr('r', radio)
@@ -51,47 +51,47 @@
     }
     background_painted = true
 
-    if(last_ihours != ihours){
+    if (last_ihours != ihours) {
 
-        if(ihours == 24){
-          var hours = _.range(24);
-          var hours_positions = _.map(hours, function(hour) {
-            var angle = hour / 24 * 2 * Math.PI;
-            if (hour.toString().length == 1) {
-              hour = '0' + hour
-            }
-            return {
-              cx: -(radio * 0.93) * Math.sin(angle),
-              cy: (radio * 0.95) * Math.cos(angle),
-              text: hour + ':00'
-            }
-          })
-        } else {
-          var num = 12
-          var hours = _.range(num);
-          var minutes = 0
-          var hours_positions = _.map(hours, function(hour) {
-            var angle = hour / num * 2 * Math.PI;
-            var minutes = hour * ( 60 / num )
-            var now = new Date()
+      if (ihours == 24) {
+        var hours = _.range(24);
+        var hours_positions = _.map(hours, function(hour) {
+          var angle = hour / 24 * 2 * Math.PI;
+          if (hour.toString().length == 1) {
+            hour = '0' + hour
+          }
+          return {
+            cx: -(radio * 0.93) * Math.sin(angle),
+            cy: (radio * 0.95) * Math.cos(angle),
+            text: hour + ':00'
+          }
+        })
+      } else {
+        var num = 12
+        var hours = _.range(num);
+        var minutes = 0
+        var hours_positions = _.map(hours, function(hour) {
+          var angle = hour / num * 2 * Math.PI;
+          var minutes = hour * (60 / num)
+          var now = new Date()
 
-            if (minutes.toString().length == 1) {
-              minutes = '0' + minutes
-            }
-            left_hour = ""
-            if (now.getHours().toString().length == 1) {
-              left_hour = "0"
-            }
+          if (minutes.toString().length == 1) {
+            minutes = '0' + minutes
+          }
+          left_hour = ""
+          if (now.getHours().toString().length == 1) {
+            left_hour = "0"
+          }
 
-            return {
-              cx: (radio * 0.93) * Math.sin(angle),
-              cy: -(radio * 0.95) * Math.cos(angle),
-              text: left_hour + now.getHours() + ":" + minutes
-            }
-          })
-        }
+          return {
+            cx: (radio * 0.93) * Math.sin(angle),
+            cy: -(radio * 0.95) * Math.cos(angle),
+            text: left_hour + now.getHours() + ":" + minutes
+          }
+        })
+      }
 
-      if(last_ihours == false){
+      if (last_ihours == false) {
         text_labels = svgContainer.selectAll("text")
           .data(hours_positions)
           .enter()
@@ -112,22 +112,21 @@
           .attr("fill", "white")
           .attr("transform", "translate(" + (radio * 0.95) + "," + (radio * 1.005) + ")");
 
-          last_hours_positions = hours_positions
+        last_hours_positions = hours_positions
 
       } else {
-        if (last_ihours == 1 && ihours == 24){
+        if (last_ihours == 1 && ihours == 24) {
           only_hour = []
-          _.each(hours_positions, function(value, index){
-            if(value.text == last_hours_positions[0].text){
+          _.each(hours_positions, function(value, index) {
+            if (value.text == last_hours_positions[0].text) {
               only_hour.push(value)
-              // found_at_position
             }
           })
         }
 
         text_labels
           .data(only_hour)
-          .exit()//.transition()
+          .exit() //.transition()
           // .duration(1000)
           //.attr("fill", "black")
           .remove()
@@ -143,7 +142,7 @@
             return d.cy;
           })
           .text(function(d) {
-            if(d!=undefined){
+            if (d != undefined) {
               return d.text;
             } else {
               return 'd.text';
@@ -151,30 +150,30 @@
             }
           })
 
-          new_hours_positions = only_hour
-          _.each(hours_positions, function(each, pos){
-            if (each.text != only_hour[0].text){
-              new_hours_positions.push(each);
-            }
-          })
+        new_hours_positions = only_hour
+        _.each(hours_positions, function(each, pos) {
+          if (each.text != only_hour[0].text) {
+            new_hours_positions.push(each);
+          }
+        })
 
-          text_labels = svgContainer.selectAll("text")
-            .data(new_hours_positions)
-            .enter()
-            .append("text")
-              .attr("x", function(d) {
-                return d.cx;
-              })
-              .attr("y", function(d) {
-                return d.cy;
-              })
-              .text(function(d) {
-                return d.text;
-              })
-              .attr("font-family", "sans-serif")
-              .attr("font-size", (10 / 300 * radio) + "px")
-              .attr("fill", "white")
-              .attr("transform", "translate(" + (radio * 0.95) + "," + (radio * 1.005) + ")");
+        text_labels = svgContainer.selectAll("text")
+          .data(new_hours_positions)
+          .enter()
+          .append("text")
+          .attr("x", function(d) {
+            return d.cx;
+          })
+          .attr("y", function(d) {
+            return d.cy;
+          })
+          .text(function(d) {
+            return d.text;
+          })
+          .attr("font-family", "sans-serif")
+          .attr("font-size", (10 / 300 * radio) + "px")
+          .attr("fill", "white")
+          .attr("transform", "translate(" + (radio * 0.95) + "," + (radio * 1.005) + ")");
       }
     }
     last_ihours = ihours
@@ -185,12 +184,12 @@
 
     var miliseconds_at_midnight = new Date(currentDate.getUTCFullYear() + '-' + (currentDate.getMonth() + 1) + '-' + currentDate.getDate())
     var miliseconds_elapsed = currentDate.getTime() - miliseconds_at_midnight.getTime()
-    var percentage_elapsed = miliseconds_elapsed / (1000*60*60*24)
+    var percentage_elapsed = miliseconds_elapsed / (1000 * 60 * 60 * 24)
 
-    if(ihours == 1){
-      var miliseconds_at_last_hour = new Date(currentDate.getUTCFullYear() + '-' + (currentDate.getMonth() + 1) + '-' + currentDate.getDate()  + ' '+currentDate.getHours()+':00:00' )
+    if (ihours == 1) {
+      var miliseconds_at_last_hour = new Date(currentDate.getUTCFullYear() + '-' + (currentDate.getMonth() + 1) + '-' + currentDate.getDate() + ' ' + currentDate.getHours() + ':00:00')
       var miliseconds_elapsed = currentDate.getTime() - miliseconds_at_midnight.getTime()
-      var percentage_elapsed = miliseconds_elapsed / (1000*60*60)
+      var percentage_elapsed = miliseconds_elapsed / (1000 * 60 * 60)
     }
 
     var items = Object.keys(data[0])
@@ -199,7 +198,6 @@
 
     var total_values = {}
     _.map(items, function(item, itemIndex) {
-      console.log(item)
       itemized_values = []
       var itemized_data = _.map(data, function(eachdata) {
         return eachdata[item]
@@ -211,7 +209,7 @@
         minVal = d3.min(itemized_data_values)
       var scaleit = d3.scale.linear()
         .domain([0, maxVal])
-        .range([0, radio*0.90]);
+        .range([0, radio * 0.90]);
 
       var pos = 0;
       for (i = 0; i < 2 * Math.PI; i = i + 2 * Math.PI / divitions) {
@@ -237,12 +235,12 @@
           pos++;
         }
       }
-      var to_rotate = - 180 + percentage_elapsed * 360
-      if(ihours == 1){
+      var to_rotate = -180 + percentage_elapsed * 360
+      if (ihours == 1) {
         var to_rotate = percentage_elapsed * 360
       }
 
-      function paint_arcs(itemized_values, radio, to_rotate, itemIndex, redraw, server_name) {
+      function paint_arcs(itemized_values, radio, to_rotate, itemIndex, server_name) {
         var arc = d3.svg.arc()
           .innerRadius(function(d) {
             // return d.previousValue
@@ -261,35 +259,47 @@
             return d.pos + 2 * Math.PI / divitions
           });
 
-        if(previously_itemized_values[server_name] == null){
-          existing_arcs[server_name] = svgContainer.selectAll("g").data(itemized_values, function(d){return  d.id}).enter().append('path')
+        if (!assigned_colors) {
+          var assigned_colors = []
+        }
+        if (assigned_colors[server_name] == undefined) {
+          assigned_colors[server_name] = colors.pop()
+        }
+
+        if (previously_itemized_values[server_name] == null) {
+          existing_arcs[server_name] = svgContainer.selectAll("g").data(itemized_values, function(d) {
+              return d.id
+            }).enter().append('path')
             .attr("d", arc).attr("opacity", function(d) {
               return d.transparency
             })
             .attr("transform", "translate(" + radio + "," + radio + ") rotate(" + to_rotate + ") ")
-            .attr('fill', colors[itemIndex]);
+            .attr('fill', assigned_colors[server_name]);
 
           previously_itemized_values[server_name] = itemized_values
         } else {
-          existing_arcs[server_name].data(itemized_values, function(d){return  d.id}).transition()
-          .duration(3000)
-          .attr("d", arc).attr("opacity", function(d) {
-            return d.transparency
-          })
-          .attr("transform", "translate(" + radio + "," + radio + ") rotate(" + to_rotate + ") ")
-          .attr('fill', colors[itemIndex]);
+          existing_arcs[server_name].data(itemized_values, function(d) {
+              return d.id
+            }).transition()
+            .duration(3000)
+            .attr("d", arc).attr("opacity", function(d) {
+              return d.transparency
+            })
+            .attr("transform", "translate(" + radio + "," + radio + ") rotate(" + to_rotate + ") ")
+            .attr('fill', assigned_colors[server_name]);
 
-          existing_arcs[server_name].data(itemized_values, function(d){return  d.id}).enter().append('path')
-          .attr("d", arc).attr("opacity", function(d) {
-            return d.transparency
-          })
-          .attr("transform", "translate(" + radio + "," + radio + ") rotate(" + to_rotate + ") ")
-          .attr('fill', colors[itemIndex]);
+          existing_arcs[server_name].data(itemized_values, function(d) {
+              return d.id
+            }).enter().append('path')
+            .attr("d", arc).attr("opacity", function(d) {
+              return d.transparency
+            })
+            .attr("transform", "translate(" + radio + "," + radio + ") rotate(" + to_rotate + ") ")
+            .attr('fill', assigned_colors[server_name]);
 
         }
       }
 
-      console.log('painting arcs: '+itemized_values)
       paint_arcs(itemized_values, radio, to_rotate, itemIndex, item)
 
     })
@@ -301,90 +311,274 @@
   }
 
 
-var user = {name: 'Carlos Guerrero',
-  services:[{
-    name: 'Mediahint',
-    servers: [
-      {
+  var user = {
+    name: 'Carlos Guerrero',
+    services: [{
+      name: 'Mediahint',
+      servers: [{
         longview: '88F48041-B897-A5FB-88B706D42D45A501',
         pm2: 'holaproxy1'
-      },
-      {
+      }, {
         longview: '88F48041-B897-A5FB-88B706D42D45A502',
         pm2: 'holaproxy2'
-      },
-      {
+      }, {
         longview: '88F48041-B897-A5FB-88B706D42D45A503',
         pm2: 'holaproxy3'
-      },
-      {
+      }, {
         longview: '88F48041-B897-A5FB-88B706D42D45A504',
         pm2: 'holaproxy4'
-      },
-      {
+      }, {
         longview: '88F48041-B897-A5FB-88B706D42D45A505',
         pm2: 'holaproxy5'
-      },
-      {
+      }, {
         longview: '88F48041-B897-A5FB-88B706D42D45A506',
         pm2: 'holaproxy6'
       }]
     }]
   }
 
-  function get_last_hour(){
-    server_list = _.map(user.services[0].servers, function(each){ return each.longview})
-    server_list = ['88F48041-B897-A5FB-88B706D42D45A502', '88F48041-B897-A5FB-88B706D42D45A504']
+  var config = {
+    ball_radius: 300
+  }
+
+  var servers_graphs = {}
+
+
+  function get_last_hour() {
+    server_list = _.map(user.services[0].servers, function(each) {
+      return each.longview
+    })
+    server_list = ['88F48041-B897-A5FB-88B706D42D45A502']
     _.each(server_list, function(value, key, list) {
       servers_logs = []
-      d3.json("http://longview.carlosguerrero.com:8090/get/" + value + "/"+(121), function(err, server_logs) {
-        if(server_logs.length > 100)
+      d3.json("http://longview.carlosguerrero.com:8090/get/" + value + "/" + (121), function(err, server_logs) {
+        if (server_logs.length > 100)
+          servers_logs = []
         server_logs.reverse()
         _.each(server_logs, function(value, key, list) {
-            if (servers_logs[key] == undefined) {
-              servers_logs[key] = {}
-            }
 
-            servers_logs[key][value.apikey] = {value: value.Memory_real_used, id: value.apikey+value.timestamp};
-          })
-          generateBall(servers_logs, 300, 1)
+          if (servers_logs[key] == undefined) {
+            servers_logs[key] = {}
+          }
+
+          servers_logs[key][value.apikey] = {
+            value: value.Memory_real_used,
+            id: value.apikey + value.timestamp
+          };
+        })
+        generateBall(servers_logs, config.ball_radius, 1)
 
       })
     })
   }
 
-  function get_last_day(){
+  function get_last_day() {
     // server_list = _.map(user.services[0].servers, function(each){ return each.longview})
-    server_list = _.map(user.services[0].servers, function(each){ return each.longview})
-    server_list = ['88F48041-B897-A5FB-88B706D42D45A502', '88F48041-B897-A5FB-88B706D42D45A504']
+    server_list = _.map(user.services[0].servers, function(each) {
+      return each.longview
+    })
+    server_list = ['88F48041-B897-A5FB-88B706D42D45A502']
 
     _.each(server_list, function(value, key, list) {
       servers_logs = []
-      d3.json("http://longview.carlosguerrero.com:8090/get/" + value + "/"+(2880), function(err, server_logs) {
-        if(server_logs.length > 100)
+      d3.json("http://longview.carlosguerrero.com:8090/get/" + value + "/" + (2880), function(err, server_logs) {
+        if (server_logs.length > 100)
+          servers_logs = []
         server_logs.reverse()
         _.each(server_logs, function(value, key, list) {
-            if (servers_logs[key] == undefined) {
-              servers_logs[key] = {}
-            }
-            servers_logs[key][value.apikey] = {value: value.Memory_real_used, id: value.apikey+value.timestamp};
-          })
-          generateBall(servers_logs, 300, 24)
+          if (servers_logs[key] == undefined) {
+            servers_logs[key] = {}
+          }
+          servers_logs[key][value.apikey] = {
+            value: value.Memory_real_used,
+            id: value.apikey + value.timestamp
+          };
+        })
+        generateBall(servers_logs, config.ball_radius, 24)
       })
     })
   }
 
-  window.onload = function(){
+  function nodes_tree(width, height) {
+    var treeContainer = d3.select("body").append("svg")
+      .attr("width", width)
+      .attr("height", height);
+
+    var tree_container = treeContainer.selectAll("text.title").data(user.services)
+      .enter().append('text')
+
+    console.log(tree_container)
+    var textLabels = tree_container
+      .attr("x", function(d, i) {
+        return 10
+      })
+      .attr("y", function(d, i) {
+        return 20 + 40 * i;
+      })
+      .text(function(d, i) {
+        return d.name;
+      })
+      .attr("font-family", "sans-serif")
+      .attr("font-size", "20px")
+      .attr("fill", "black");
+
+    _.each(user.services, function(service) {
+      console.log(service.name)
+
+      var tree_container = treeContainer.selectAll("text.server").data(service.servers)
+        .enter().append('g').append('text')
+
+      console.log(tree_container)
+      var textLabels = tree_container
+        .attr("x", function(d, i) {
+          return 20
+        })
+        .attr("y", function(d, i) {
+          return 60 + 40 * i;
+        })
+        .text(function(d, i) {
+          return d.pm2;
+        })
+        .attr("font-family", "sans-serif")
+        .attr("font-size", "20px")
+        .attr("fill", "grey");
+
+      console.log(service.servers)
+
+      // servers graphs
+      // each of the servers
+      servers_graphs_array = []
+      servers_graphs = {}
+
+      function update_values_every(timeout, servers, key, order) {
+        var painted = false;
+        var tree_container = {}
+        var items = [{key: "load", pos: 0}, {key: "memory", pos:1},{key:"swap", pos:1}]
+        // var items = [{key: "load", pos: 0}, {key: "memory", pos:1}]
+
+        if (painted == false) {
+          _.each(items, function(item){
+            key = item.key
+            _.each(servers, function(each_server) {
+              // populate initial empty graphs with proper key IDs for right visual order
+              servers_graphs_array.push(each_server)
+              servers_graphs[each_server.longview] = each_server
+              console.log('servers_graphs')
+              console.log(servers_graphs)
+            });
+
+            tree_container[key] = treeContainer.selectAll("bar."+key).data(servers_graphs_array, function(d) {
+                return d.longview
+              })
+              .enter().append('rect')
+            tree_container[key].attr("x", 150)
+              .attr("y", function(d, i) {
+                return 45 + 40 * i;
+              })
+              .attr("width", 1)
+              .attr("height", 10);
+          })
+
+          painted = true
+        }
+
+        function update_now() {
+          console.log('inside update_now')
+
+          _.each(servers, function(each_server) {
+
+            d3.json("http://longview.carlosguerrero.com:8090/get/" + each_server.longview + "/1",
+              function(err, server_log) {
+
+                _.each(items, function(item){
+
+                key = item.key
+                order = item.pos
+
+
+
+
+                servers_graphs[each_server.longview] = server_log[0]
+                console.log('servers_graphs 2')
+                console.log(servers_graphs)
+                servers_graphs[each_server.longview].longview = servers_graphs[each_server.longview].apikey
+                servers_graphs_array = []
+                _.each(servers_graphs, function(each) {
+                  servers_graphs_array.push(each)
+                })
+                console.log('servers_graphs_array')
+                console.log(servers_graphs_array)
+
+                tree_container[key].data(servers_graphs_array, function(d) {
+                    return d.longview
+                  })
+                  .transition().attr("x", 150)
+                  .attr("y", function(d, i) {
+                    return 43 + 40 * i + (10*order);
+                  })
+                  .attr("width", function(d, i) {
+                    if (d.timestamp) {
+                      if(key.indexOf('memory')> -1){
+                        var memory_total = d.Memory_real_free + d.Memory_real_used
+                        console.log('memory_total')
+                        console.log(memory_total)
+                        console.log(d.Memory_real_used / memory_total * 100)
+                        return (d.Memory_real_used / memory_total * width * 0.7)
+                      }
+                      if(key.indexOf('swap')> -1){
+                        var memory_total = d.Memory_real_free + d.Memory_real_used
+                        console.log('memory_total')
+                        console.log(memory_total)
+                        console.log(d.Memory_swap_used / memory_total * 100)
+                        return (d.Memory_swap_used / memory_total * width * 0.7)
+                      }
+                      return d[key] * width*0.7
+                    } else {
+                      return 1
+                    }
+                  })
+                  .style("fill", function(){
+                    if(key.indexOf('load') > -1){ return 'green'; }
+                    if(key.indexOf('memory') > -1){ return 'gold'; }
+                    if(key.indexOf('swap') > -1){ return 'red'; }
+                  })
+                  .attr("height", 10);
+
+                })
+
+
+              })
+          })
+
+          setTimeout(function(){
+             update_now()
+          }, timeout*1000)
+        }
+        update_now()
+
+      }
+
+
+      update_values_every(30, service.servers, 'load', 0)
+
+
+      // _.each(service.servers, function(server){
+      //
+      // })
+    })
+  }
+
+  window.onload = function() {
     var button = document.getElementById('change1')
     button.addEventListener("click", function() {
       console.log('click action...')
       get_last_day()
     })
     get_last_hour()
+    nodes_tree(600, 600)
   }
-
 </script>
 
 <body>
-<button id="change1" type="button" class="alert button">24h</button>
+  <button id="change1" type="button" class="alert button">24h</button>
 </body>
