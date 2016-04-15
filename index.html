@@ -11,8 +11,7 @@
 <script src="underscore.js" charset="utf-8"></script>
 
 <script>
-  var colors = ["#a50026", "#d73027", "#f46d43", "#fdae61", "#fee08b", "#ffffbf", "#d9ef8b", "#a6d96a", "#66bd63", "#1a9850", "#006837"]
-  var colors = ["#a50026", "#d73027", "#f46d43", "#fdae61", "#fee08b", "#ffffbf", "#d9ef8b", "#a6d96a", "#66bd63", "#1a9850", "#a50026"]
+  var main_colors = ["#a50026", "#d73027", "#f46d43", "#fdae61", "#fee08b", "#ffffbf", "#d9ef8b", "#a6d96a", "#66bd63", "#1a9850", "#00aa00", "rgb(255, 215, 0)"]
 
   function randomArray(length, max) {
     return Array.apply(null, Array(length)).map(function(_, i) {
@@ -38,8 +37,19 @@
   var existing_arcs = []
   var previously_itemized_values = []
 
-  var generateBall = function(data, radio, ihours) {
-    // ihours = 24
+
+  var generateBall = function(data, radio, ihours, type, assigned_colors) {
+
+
+    if (type == undefined) {
+      var maxVal = 0
+      var scaleit
+    } else {
+      var maxVal = []
+      var scaleit = []
+    }
+    console.log('generate new Ball')
+      // ihours = 24
 
     if (!background_painted) {
       var circle = svgContainer.append('circle')
@@ -192,119 +202,181 @@
       var percentage_elapsed = miliseconds_elapsed / (1000 * 60 * 60)
     }
 
+    // get the columns that come in the data by checking the first row
     var items = Object.keys(data[0])
 
-    var itemIndex = 0
+    items = _.sortBy(items, function(d) {
+      return d
+    })
 
     var total_values = {}
     _.map(items, function(item, itemIndex) {
+
+      var itemized_data_values = _.map(data, function(eachdata) {
+        if(eachdata[item]['max_val']>0){
+          console.log('has max_val, using it: '+eachdata[item]['max_val'])
+          return eachdata[item]['max_val']
+        } else {
+          return eachdata[item]['value']
+        }
+      })
+
+      if (type == undefined) {
+        if (maxVal == undefined) {
+          maxVal = 0
+        }
+        maxVal += d3.max(itemized_data_values)
+
+        scaleit = d3.scale.linear()
+          .domain([0, maxVal])
+          .range([0, radio * 0.90]);
+
+      } else {
+        if (maxVal[itemIndex] == undefined) {
+          maxVal[itemIndex] = 0
+        }
+        maxVal[itemIndex] += d3.max(itemized_data_values)
+        console.log('generating scale linear with max as: ' + maxVal[itemIndex])
+        scaleit[itemIndex] = d3.scale.linear()
+          .domain([0, maxVal[itemIndex]])
+          .range([0, radio * 0.90]);
+      }
+
+    })
+
+    var all_previously_existing_items = Object.keys(existing_arcs)
+
+    _.map(items, function(item, itemIndex) {
+      console.log("Processing " + item + " with itemIndex: " + itemIndex)
+      all_previously_existing_items.splice(all_previously_existing_items.indexOf(itemIndex.toString()), 1)
       itemized_values = []
+
       var itemized_data = _.map(data, function(eachdata) {
         return eachdata[item]
       })
-      var itemized_data_values = _.map(data, function(eachdata) {
-        return eachdata[item]['value']
-      })
-      var maxVal = d3.max(itemized_data_values),
-        minVal = d3.min(itemized_data_values)
-      var scaleit = d3.scale.linear()
-        .domain([0, maxVal])
-        .range([0, radio * 0.90]);
 
       var pos = 0;
       for (i = 0; i < 2 * Math.PI; i = i + 2 * Math.PI / divitions) {
         if (itemized_data[pos] != undefined && typeof(itemized_data[pos]['value']) == 'number') {
-
           if (total_values[pos] == undefined) {
             total_values[pos] = 0
           }
+          //console.log(itemized_data[pos]['value'])
 
-          value = scaleit(itemized_data[pos]['value'])
+          if (type == undefined) {
+            value = scaleit(itemized_data[pos]['value'])
+          } else {
+            value = scaleit[itemIndex](itemized_data[pos]['value'])
+          }
+
+          //console.log(value)
+
           if (value < 0) {
             value = -1 * value
           }
-
+          //console.log(itemized_values)
           itemized_values.push({
             "pos": i,
+            "itemIndex": itemIndex,
             "value": value,
             "previousValue": total_values[pos],
-            "id": itemized_data[pos]['id'],
+            //"transparency": 0.7
             "transparency": 1 - (divitions - pos) / (divitions) + 0.3
           })
           total_values[pos] = total_values[pos] + value
-          pos++;
         }
+        pos++;
+
       }
       var to_rotate = -180 + percentage_elapsed * 360
       if (ihours == 1) {
         var to_rotate = percentage_elapsed * 360
       }
 
+      console.log()
+
       function paint_arcs(itemized_values, radio, to_rotate, itemIndex, server_name) {
-        var arc = d3.svg.arc()
-          .innerRadius(function(d) {
-            // return d.previousValue
-            return 0;
-          })
-          .outerRadius(function(d) {
-            // return d.previousValue + d.value
-            return d.value;
-            //return 0;
-
-          })
-          .startAngle(function(d) {
-            return d.pos
-          })
-          .endAngle(function(d) {
-            return d.pos + 2 * Math.PI / divitions
-          });
-
-        if (!assigned_colors) {
-          var assigned_colors = []
-        }
-        if (assigned_colors[server_name] == undefined) {
-          assigned_colors[server_name] = colors.pop()
-        }
-
-        if (previously_itemized_values[server_name] == null) {
-          existing_arcs[server_name] = svgContainer.selectAll("g").data(itemized_values, function(d) {
-              return d.id
-            }).enter().append('path')
-            .attr("d", arc).attr("opacity", function(d) {
-              return d.transparency
+        if (type == undefined) {
+          var arc = d3.svg.arc()
+            .innerRadius(function(d) {
+              // return d.previousValue
+              return d.previousValue;
             })
-            .attr("transform", "translate(" + radio + "," + radio + ") rotate(" + to_rotate + ") ")
-            .attr('fill', assigned_colors[server_name]);
-
-          previously_itemized_values[server_name] = itemized_values
+            .outerRadius(function(d) {
+              return d.value + d.previousValue;
+            })
+            .startAngle(function(d) {
+              return d.pos
+            })
+            .endAngle(function(d) {
+              return d.pos + 2 * Math.PI / (divitions)
+            });
         } else {
-          existing_arcs[server_name].data(itemized_values, function(d) {
-              return d.id
-            }).transition()
-            .duration(3000)
-            .attr("d", arc).attr("opacity", function(d) {
-              return d.transparency
+          var arc = d3.svg.arc()
+            .innerRadius(function(d) {
+              // return d.previousValue
+              return 0;
             })
-            .attr("transform", "translate(" + radio + "," + radio + ") rotate(" + to_rotate + ") ")
-            .attr('fill', assigned_colors[server_name]);
+            .outerRadius(function(d) {
+              return d.value;
+            })
+            .startAngle(function(d) {
+              return d.pos + (2 * Math.PI / (divitions) / 2) * (d.itemIndex - 1)
+            })
+            .endAngle(function(d) {
+              return d.pos + 2 * Math.PI / (divitions) / 2 + (2 * Math.PI / (divitions) / 2) * (d.itemIndex - 1)
+            });
+        }
 
-          existing_arcs[server_name].data(itemized_values, function(d) {
-              return d.id
+
+        if (previously_itemized_values[itemIndex] == null) {
+          existing_arcs[itemIndex] = svgContainer.selectAll("g").data(itemized_values, function(d) {
+              return d.pos
             }).enter().append('path')
             .attr("d", arc).attr("opacity", function(d) {
               return d.transparency
             })
             .attr("transform", "translate(" + radio + "," + radio + ") rotate(" + to_rotate + ") ")
-            .attr('fill', assigned_colors[server_name]);
+            .attr('fill', assigned_colors[itemIndex])
+            .on('click', function(d) {
+              console.log(d)
+            })
+
+          previously_itemized_values[itemIndex] = itemized_values
+        } else {
+          console.log('should be transitioning now!')
+          existing_arcs[itemIndex].data(itemized_values).transition()
+            .duration(1000)
+            .attr("d", arc).attr("opacity", function(d) {
+              return d.transparency
+            })
+            .attr("transform", "translate(" + radio + "," + radio + ") rotate(" + to_rotate + ") ")
+            .attr('fill', assigned_colors[itemIndex]);
+
+          // existing_arcs[itemIndex].data(itemized_values, function(d) {
+          //     return d.id
+          //   }).enter().append('path')
+          //   .attr("d", arc).attr("opacity", function(d) {
+          //     return d.transparency
+          //   })
+          //   .attr("transform", "translate(" + radio + "," + radio + ") rotate(" + to_rotate + ") ")
+          //   .attr('fill', assigned_colors[itemIndex]);
 
         }
+
+
+
       }
 
       paint_arcs(itemized_values, radio, to_rotate, itemIndex, item)
 
     })
-
-
+    console.log('removing previously existing ones: ' + all_previously_existing_items)
+    _.each(all_previously_existing_items, function(each) {
+      existing_arcs[each].data([]).exit()
+        .transition()
+        .attr("opacity", 0)
+    })
 
 
 
@@ -344,14 +416,16 @@
   var servers_graphs = {}
 
 
-  function get_last_hour() {
-    server_list = _.map(user.services[0].servers, function(each) {
-      return each.longview
-    })
-    server_list = ['88F48041-B897-A5FB-88B706D42D45A502']
+  function get_last_hour_of(server) {
+    // server_list = _.map(user.services[0].servers, function(each) {
+    //   return each.longview
+    // })
+    // server_list = ['88F48041-B897-A5FB-88B706D42D45A502']
+    var server_list = []
+    server_list.push(server)
     _.each(server_list, function(value, key, list) {
       servers_logs = []
-      d3.json("http://longview.carlosguerrero.com:8090/get/" + value + "/" + (121), function(err, server_logs) {
+      d3.json("http://longview.carlosguerrero.com:8090/get/" + value + "/" + (120), function(err, server_logs) {
         if (server_logs.length > 100)
           servers_logs = []
         server_logs.reverse()
@@ -366,11 +440,78 @@
             id: value.apikey + value.timestamp
           };
         })
-        generateBall(servers_logs, config.ball_radius, 1)
-
+        generateBall(servers_logs, config.ball_radius, 1, main_colors)
       })
     })
   }
+
+  function get_of(server_list, server_keys, hours, type, colors) {
+    console.log('in get_of')
+
+    _.each(server_list, function(value, list_key, list) {
+      servers_logs = []
+      d3.json("http://longview.carlosguerrero.com:8090/get/" + value + "/" + (120 * hours), function(err, server_logs) {
+        server_logs.reverse()
+        _.each(server_keys, function(each_server_key) {
+
+          _.each(server_logs, function(value, key, list) {
+
+            if (servers_logs[key] == undefined) {
+              servers_logs[key] = {}
+            }
+            var max_val = 0
+            if (each_server_key.indexOf('Mem') > -1) {
+              max_val = value.Memory_real_used + value.Memory_real_free
+            }
+
+            if (each_server_key.indexOf('load') > -1) {
+              max_val = 1.25
+            }
+
+            servers_logs[key][value.apikey + each_server_key] = {
+              value: value[each_server_key],
+              max_val: max_val
+            };
+          })
+
+        })
+
+        generateBall(servers_logs, config.ball_radius, 1, type, colors)
+
+      })
+
+    })
+
+  }
+
+  function get_all_last_hour_bandwidth() {
+    server_list = _.map(user.services[0].servers, function(each) {
+        return each.longview
+      })
+      // server_list = ['88F48041-B897-A5FB-88B706D42D45A504', '88F48041-B897-A5FB-88B706D42D45A502']
+      //var server_list = []
+      //server_list.push(server)
+    _.each(server_list, function(value, server_position_in_list, list) {
+      servers_logs = []
+      d3.json("http://longview.carlosguerrero.com:8090/get/" + value + "/" + (120), function(err, server_logs) {
+        server_logs.reverse()
+        _.each(server_logs, function(value, i, list) {
+
+          if (servers_logs[i] == undefined) {
+            servers_logs[i] = {}
+          }
+
+          servers_logs[i][value.apikey] = {
+            value: value.rx_Kbps,
+          };
+        })
+
+        console.log(main_colors)
+        generateBall(servers_logs, config.ball_radius, 1, undefined, main_colors)
+      })
+    })
+  }
+
 
   function get_last_day() {
     // server_list = _.map(user.services[0].servers, function(each){ return each.longview})
@@ -407,7 +548,6 @@
     var tree_container = treeContainer.selectAll("text.title").data(user.services)
       .enter().append('text')
 
-    console.log(tree_container)
     var textLabels = tree_container
       .attr("x", function(d, i) {
         return 10
@@ -420,15 +560,14 @@
       })
       .attr("font-family", "sans-serif")
       .attr("font-size", "20px")
-      .attr("fill", "black");
+      .attr("fill", "black")
+
 
     _.each(user.services, function(service) {
-      console.log(service.name)
 
       var tree_container = treeContainer.selectAll("text.server").data(service.servers)
         .enter().append('g').append('text')
 
-      console.log(tree_container)
       var textLabels = tree_container
         .attr("x", function(d, i) {
           return 20
@@ -441,108 +580,181 @@
         })
         .attr("font-family", "sans-serif")
         .attr("font-size", "20px")
-        .attr("fill", "grey");
+        .attr("fill", "grey")
+        .on("click", function(d, i) {
+          // get_last_hour_of(d.longview)
+          var test_list = []
+          test_list.push(d.longview)
+          get_of(test_list, ['load', 'Memory_real_used'], 1, 'twin', ["rgb(255, 215, 0)", "#00aa00"])
+        })
 
-      console.log(service.servers)
 
       // servers graphs
       // each of the servers
       servers_graphs_array = []
       servers_graphs = {}
+      ports_list_containers = []
 
       function update_values_every(timeout, servers, key, order) {
         var painted = false;
         var tree_container = {}
-        var items = [{key: "load", pos: 0}, {key: "memory", pos:1},{key:"swap", pos:1}]
-        // var items = [{key: "load", pos: 0}, {key: "memory", pos:1}]
+        var items = [{
+            key: "load",
+            pos: 0
+          }, {
+            key: "Memory_real_used",
+            pos: 1
+          }, {
+            key: "swap",
+            pos: 1
+          }, {
+            key: "ports",
+            pos: 2,
+            type: 'text'
+          }]
+          // var items = [{key: "load", pos: 0}, {key: "memory", pos:1}]
 
         if (painted == false) {
-          _.each(items, function(item){
-            key = item.key
+          _.each(items, function(item) {
+            var key = item.key
+            var type = item.type
             _.each(servers, function(each_server) {
               // populate initial empty graphs with proper key IDs for right visual order
               servers_graphs_array.push(each_server)
               servers_graphs[each_server.longview] = each_server
-              console.log('servers_graphs')
-              console.log(servers_graphs)
             });
 
-            tree_container[key] = treeContainer.selectAll("bar."+key).data(servers_graphs_array, function(d) {
-                return d.longview
-              })
-              .enter().append('rect')
-            tree_container[key].attr("x", 150)
-              .attr("y", function(d, i) {
-                return 45 + 40 * i;
-              })
-              .attr("width", 1)
-              .attr("height", 10);
+            if (type != undefined && type.indexOf('text') > -1) {
+
+            } else {
+              tree_container[key] = treeContainer.selectAll("bar." + key).data(servers_graphs_array, function(d) {
+                  return d.longview
+                })
+                .enter().append('rect')
+              tree_container[key].attr("x", 150)
+                .attr("y", function(d, i) {
+                  return 45 + 40 * i;
+                })
+                .attr("width", 1)
+                .attr("height", 10)
+                .on('click', function(d){
+                  console.log(d)
+                  if(key.indexOf('Mem')>-1){
+                    bars_color = 'rgb(255, 215, 0)'
+                  } else {
+                    bars_color = '#00aa00'
+                  }
+                  get_of([d.apikey], [key], 1, undefined, [bars_color])
+                })
+            }
+
           })
 
           painted = true
         }
 
         function update_now() {
-          console.log('inside update_now')
 
           _.each(servers, function(each_server) {
 
             d3.json("http://longview.carlosguerrero.com:8090/get/" + each_server.longview + "/1",
               function(err, server_log) {
 
-                _.each(items, function(item){
+                _.each(items, function(item) {
 
-                key = item.key
-                order = item.pos
+                  key = item.key
+                  order = item.pos
+                  type = item.type
 
+                  if (type != undefined && type.indexOf('text') > -1) {
 
+                    var this_server = server_log[0].apikey //.replace(/-/g,'')
+                    var pos = Object.keys(servers_graphs).indexOf(each_server.longview)
 
+                    server_log[0].Ports_listening = _.sortBy(server_log[0].Ports_listening, function(each) {
+                      return each.port
+                    })
 
-                servers_graphs[each_server.longview] = server_log[0]
-                console.log('servers_graphs 2')
-                console.log(servers_graphs)
-                servers_graphs[each_server.longview].longview = servers_graphs[each_server.longview].apikey
-                servers_graphs_array = []
-                _.each(servers_graphs, function(each) {
-                  servers_graphs_array.push(each)
-                })
-                console.log('servers_graphs_array')
-                console.log(servers_graphs_array)
+                    _.each(server_log[0].Ports_listening, function(each) {
+                      each.pos = pos
+                    })
 
-                tree_container[key].data(servers_graphs_array, function(d) {
-                    return d.longview
-                  })
-                  .transition().attr("x", 150)
-                  .attr("y", function(d, i) {
-                    return 43 + 40 * i + (10*order);
-                  })
-                  .attr("width", function(d, i) {
-                    if (d.timestamp) {
-                      if(key.indexOf('memory')> -1){
-                        var memory_total = d.Memory_real_free + d.Memory_real_used
-                        console.log('memory_total')
-                        console.log(memory_total)
-                        console.log(d.Memory_real_used / memory_total * 100)
-                        return (d.Memory_real_used / memory_total * width * 0.7)
-                      }
-                      if(key.indexOf('swap')> -1){
-                        var memory_total = d.Memory_real_free + d.Memory_real_used
-                        console.log('memory_total')
-                        console.log(memory_total)
-                        console.log(d.Memory_swap_used / memory_total * 100)
-                        return (d.Memory_swap_used / memory_total * width * 0.7)
-                      }
-                      return d[key] * width*0.7
+                    if (ports_list_containers[this_server] == undefined) {
+                      ports_list_containers[this_server] = treeContainer.selectAll("text.ports" + this_server)
+                        .data(server_log[0].Ports_listening)
+                        .enter().append('text')
+
+                      this_ports_list_container = ports_list_containers[this_server]
                     } else {
-                      return 1
+                      this_ports_list_container = ports_list_containers[this_server].data(server_log[0].Ports_listening).transition()
                     }
-                  })
-                  .style("fill", function(){
-                    if(key.indexOf('load') > -1){ return 'green'; }
-                    if(key.indexOf('memory') > -1){ return 'gold'; }
-                    if(key.indexOf('swap') > -1){ return 'red'; }
-                  })
-                  .attr("height", 10);
+
+                    this_ports_list_container.attr("y", 10).attr("font-size", "9px")
+                      .attr("x", function(d, i) {
+                        return 150 + i * 40
+                      })
+                      .attr("y", function(d, i) {
+                        return 72 + d.pos * 40
+                      })
+                      .style("fill", function(d) {
+                        if (d.ip.indexOf('127.0.0.1') > -1) {
+                          return 'grey'
+                        } else {
+                          return 'black'
+                        }
+                      })
+                      .text(function(d) {
+                        return d.port
+                      })
+                      // .append("svg:title").text(function(d){return d.name + " ("+d.type+" "+d.ip+":"+d.port+") "+d.user });
+
+
+
+                  } else {
+                    servers_graphs[each_server.longview] = server_log[0]
+                    servers_graphs[each_server.longview].longview = servers_graphs[each_server.longview].apikey
+                    servers_graphs_array = []
+                    _.each(servers_graphs, function(each) {
+                      servers_graphs_array.push(each)
+                    })
+
+                    tree_container[key].data(servers_graphs_array, function(d) {
+                        return d.longview
+                      })
+                      .transition().attr("x", 150)
+                      .attr("y", function(d, i) {
+                        return 43 + 40 * i + (10 * order);
+                      })
+                      .attr("width", function(d, i) {
+                        if (d.timestamp) {
+                          if (key.indexOf('Mem') > -1) {
+                            var memory_total = d.Memory_real_free + d.Memory_real_used
+                            return (d.Memory_real_used / memory_total * width * 0.7)
+                          }
+                          if (key.indexOf('swap') > -1) {
+                            var memory_total = d.Memory_real_free + d.Memory_real_used
+                            return (d.Memory_swap_used / memory_total * width * 0.7)
+                          }
+                          return d[key] * width * 0.7
+                        } else {
+                          return 1
+                        }
+                      })
+                      .style("fill", function() {
+                        if (key.indexOf('load') > -1) {
+                          return '#00aa00';
+                        }
+                        if (key.indexOf('Mem') > -1) {
+                          return 'gold';
+                        }
+                        if (key.indexOf('swap') > -1) {
+                          return 'red';
+                        }
+                      })
+                      .attr("height", 10);
+
+                  }
+
 
                 })
 
@@ -550,9 +762,9 @@
               })
           })
 
-          setTimeout(function(){
-             update_now()
-          }, timeout*1000)
+          setTimeout(function() {
+            update_now()
+          }, timeout * 1000)
         }
         update_now()
 
@@ -574,11 +786,20 @@
       console.log('click action...')
       get_last_day()
     })
-    get_last_hour()
+
+    var button = document.getElementById('allbandwidth')
+    button.addEventListener("click", function() {
+      get_all_last_hour_bandwidth()
+    })
+
+    test_list = ['88F48041-B897-A5FB-88B706D42D45A504']
+      //get_of(test_list, ['load', 'Memory_real_used'], 1)
+    get_all_last_hour_bandwidth()
     nodes_tree(600, 600)
   }
 </script>
 
 <body>
   <button id="change1" type="button" class="alert button">24h</button>
+  <button id="allbandwidth" type="button" class="alert button">All</button>
 </body>
