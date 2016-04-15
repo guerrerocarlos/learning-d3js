@@ -12,6 +12,28 @@
 
 <script>
   var main_colors = ["#a50026", "#d73027", "#f46d43", "#fdae61", "#fee08b", "#ffffbf", "#d9ef8b", "#a6d96a", "#66bd63", "#1a9850", "#00aa00", "rgb(255, 215, 0)"]
+  var main_colors = ['#800026',
+    '#bd0026',
+    '#e31a1c',
+    '#fc4e2a',
+    '#fd8d3c',
+    '#feb24c',
+    '#fed976',
+    '#ffeda0',
+    '#ffffcc', "#f7fbff", "#deebf7", "#c6dbef", "#9ecae1", "#6baed6", "#4292c6", "#2171b5", "#08519c", "#08306b", '#3f007d',
+    '#54278f',
+    '#6a51a3',
+    '#807dba',
+    '#9e9ac8',
+    '#bcbddc',
+    '#dadaeb',
+    '#efedf5',
+    '#fcfbfd'
+  ]
+
+
+
+
 
   function randomArray(length, max) {
     return Array.apply(null, Array(length)).map(function(_, i) {
@@ -19,14 +41,29 @@
     });
   }
 
+  var flag = ['#00441b',
+      '#006d2c',
+      '#238b45',
+      '#41ab5d',
+      '#74c476',
+      '#a1d99b',
+      '#c7e9c0',
+      '#e5f5e0',
+      '#f7fcf5'
+    ]
+    //var main_colors = ["#df65b0","#e7298a","#ce1256","#980043"]
 
 
 
 
   //The SVG Container
-  var svgContainer = d3.select("body").append("svg")
+  var treeContainer = d3.select("body").append("svg")
     .attr("width", 600)
     .attr("height", 600);
+  var svgContainer = d3.select("body").append("svg")
+    .attr("width", 600)
+    .attr("height", 600)
+    .style("margin-top", 20);
 
 
 
@@ -36,9 +73,11 @@
   var last_hours_positions
   var existing_arcs = []
   var previously_itemized_values = []
+  var divitions
+  var percentage_elapsed
+  var saved_data
 
-
-  var generateBall = function(data, radio, ihours, type, assigned_colors) {
+  var generateBall = function(data, radio, ihours, type, assigned_colors, update_count) {
 
 
     if (type == undefined) {
@@ -48,8 +87,6 @@
       var maxVal = []
       var scaleit = []
     }
-    console.log('generate new Ball')
-      // ihours = 24
 
     if (!background_painted) {
       var circle = svgContainer.append('circle')
@@ -188,19 +225,25 @@
     }
     last_ihours = ihours
 
-    var divitions = data.length;
 
-    var currentDate = new Date()
+    if (update_count > 0) {
 
-    var miliseconds_at_midnight = new Date(currentDate.getUTCFullYear() + '-' + (currentDate.getMonth() + 1) + '-' + currentDate.getDate())
-    var miliseconds_elapsed = currentDate.getTime() - miliseconds_at_midnight.getTime()
-    var percentage_elapsed = miliseconds_elapsed / (1000 * 60 * 60 * 24)
+    } else {
+      divitions = data.length;
 
-    if (ihours == 1) {
-      var miliseconds_at_last_hour = new Date(currentDate.getUTCFullYear() + '-' + (currentDate.getMonth() + 1) + '-' + currentDate.getDate() + ' ' + currentDate.getHours() + ':00:00')
+      var currentDate = new Date()
+
+      var miliseconds_at_midnight = new Date(currentDate.getUTCFullYear() + '-' + (currentDate.getMonth() + 1) + '-' + currentDate.getDate())
       var miliseconds_elapsed = currentDate.getTime() - miliseconds_at_midnight.getTime()
-      var percentage_elapsed = miliseconds_elapsed / (1000 * 60 * 60)
+      percentage_elapsed = miliseconds_elapsed / (1000 * 60 * 60 * 24)
+
+      if (ihours == 1) {
+        var miliseconds_at_last_hour = new Date(currentDate.getUTCFullYear() + '-' + (currentDate.getMonth() + 1) + '-' + currentDate.getDate() + ' ' + currentDate.getHours() + ':00:00')
+        var miliseconds_elapsed = currentDate.getTime() - miliseconds_at_midnight.getTime()
+        percentage_elapsed = miliseconds_elapsed / (1000 * 60 * 60)
+      }
     }
+
 
     // get the columns that come in the data by checking the first row
     var items = Object.keys(data[0])
@@ -212,14 +255,35 @@
     var total_values = {}
     _.map(items, function(item, itemIndex) {
 
-      var itemized_data_values = _.map(data, function(eachdata) {
-        if(eachdata[item]['max_val']>0){
-          console.log('has max_val, using it: '+eachdata[item]['max_val'])
-          return eachdata[item]['max_val']
-        } else {
-          return eachdata[item]['value']
-        }
-      })
+      if (update_count == 0) {
+        var itemized_data_values = _.map(data, function(eachdata) {
+          if (eachdata[item]['max_val'] > 0) {
+            return eachdata[item]['max_val']
+          } else {
+            return eachdata[item]['value']
+          }
+        })
+        saved_data = data
+      } else {
+        console.log('saved_data1')
+        console.log(saved_data)
+        saved_data[update_count - 1][item] = data[0][item]
+        console.log('saved_data2')
+        console.log(saved_data)
+
+        var itemized_data_values = _.map(saved_data, function(eachdata) {
+          if (eachdata[item]['max_val'] > 0) {
+            return eachdata[item]['max_val']
+          } else {
+            return eachdata[item]['value']
+          }
+        })
+          // itemized_data[itemized_data.length - update_count]
+      }
+
+
+
+
 
       if (type == undefined) {
         if (maxVal == undefined) {
@@ -236,7 +300,6 @@
           maxVal[itemIndex] = 0
         }
         maxVal[itemIndex] += d3.max(itemized_data_values)
-        console.log('generating scale linear with max as: ' + maxVal[itemIndex])
         scaleit[itemIndex] = d3.scale.linear()
           .domain([0, maxVal[itemIndex]])
           .range([0, radio * 0.90]);
@@ -246,14 +309,28 @@
 
     var all_previously_existing_items = Object.keys(existing_arcs)
 
+    if (update_count) {
+
+    } else {
+
+    }
+
     _.map(items, function(item, itemIndex) {
-      console.log("Processing " + item + " with itemIndex: " + itemIndex)
       all_previously_existing_items.splice(all_previously_existing_items.indexOf(itemIndex.toString()), 1)
       itemized_values = []
 
-      var itemized_data = _.map(data, function(eachdata) {
-        return eachdata[item]
-      })
+      if (update_count == 0) {
+        var itemized_data = _.map(data, function(eachdata) {
+          return eachdata[item]
+        })
+      } else {
+
+        var itemized_data = _.map(saved_data, function(eachdata) {
+            return eachdata[item]
+          })
+          // itemized_data[itemized_data.length - update_count]
+      }
+
 
       var pos = 0;
       for (i = 0; i < 2 * Math.PI; i = i + 2 * Math.PI / divitions) {
@@ -261,7 +338,6 @@
           if (total_values[pos] == undefined) {
             total_values[pos] = 0
           }
-          //console.log(itemized_data[pos]['value'])
 
           if (type == undefined) {
             value = scaleit(itemized_data[pos]['value'])
@@ -269,19 +345,22 @@
             value = scaleit[itemIndex](itemized_data[pos]['value'])
           }
 
-          //console.log(value)
 
           if (value < 0) {
             value = -1 * value
           }
-          //console.log(itemized_values)
+          var transparency = 1 - (pos-update_count) / (divitions)
+          if(transparency>1){
+            transparency = transparency - parseInt(transparency)
+          }
+
           itemized_values.push({
             "pos": i,
             "itemIndex": itemIndex,
             "value": value,
             "previousValue": total_values[pos],
             //"transparency": 0.7
-            "transparency": 1 - (divitions - pos) / (divitions) + 0.3
+            "transparency": 1 - transparency + 0.3
           })
           total_values[pos] = total_values[pos] + value
         }
@@ -293,7 +372,6 @@
         var to_rotate = percentage_elapsed * 360
       }
 
-      console.log()
 
       function paint_arcs(itemized_values, radio, to_rotate, itemIndex, server_name) {
         if (type == undefined) {
@@ -344,7 +422,6 @@
 
           previously_itemized_values[itemIndex] = itemized_values
         } else {
-          console.log('should be transitioning now!')
           existing_arcs[itemIndex].data(itemized_values).transition()
             .duration(1000)
             .attr("d", arc).attr("opacity", function(d) {
@@ -371,7 +448,6 @@
       paint_arcs(itemized_values, radio, to_rotate, itemIndex, item)
 
     })
-    console.log('removing previously existing ones: ' + all_previously_existing_items)
     _.each(all_previously_existing_items, function(each) {
       existing_arcs[each].data([]).exit()
         .transition()
@@ -388,24 +464,29 @@
     services: [{
       name: 'Mediahint',
       servers: [{
-        longview: '88F48041-B897-A5FB-88B706D42D45A501',
-        pm2: 'holaproxy1'
-      }, {
-        longview: '88F48041-B897-A5FB-88B706D42D45A502',
-        pm2: 'holaproxy2'
-      }, {
-        longview: '88F48041-B897-A5FB-88B706D42D45A503',
-        pm2: 'holaproxy3'
-      }, {
-        longview: '88F48041-B897-A5FB-88B706D42D45A504',
-        pm2: 'holaproxy4'
-      }, {
-        longview: '88F48041-B897-A5FB-88B706D42D45A505',
-        pm2: 'holaproxy5'
-      }, {
-        longview: '88F48041-B897-A5FB-88B706D42D45A506',
-        pm2: 'holaproxy6'
-      }]
+          longview: '88F48041-B897-A5FB-88B706D42D45A501',
+          pm2: 'holaproxy1'
+        }, {
+          longview: '88F48041-B897-A5FB-88B706D42D45A502',
+          pm2: 'holaproxy2'
+        }, {
+          longview: '88F48041-B897-A5FB-88B706D42D45A503',
+          pm2: 'holaproxy3'
+        }, {
+          longview: '88F48041-B897-A5FB-88B706D42D45A504',
+          pm2: 'holaproxy4'
+        }, {
+          longview: '88F48041-B897-A5FB-88B706D42D45A505',
+          pm2: 'holaproxy5'
+        }, {
+          longview: '88F48041-B897-A5FB-88B706D42D45A506',
+          pm2: 'holaproxy6'
+        }
+
+
+
+
+      ]
     }]
   }
 
@@ -446,71 +527,77 @@
   }
 
   function get_of(server_list, server_keys, hours, type, colors) {
-    console.log('in get_of')
+    var update_count = -1
+    var trigger_get_of = function(update) {
+      _.each(server_list, function(value, list_key, list) {
+        servers_logs = []
+        var nvalues
+        if (update) {
+          nvalues = 1
+        } else {
+          nvalues = (120 * hours)
+          nvalues = 10
+        }
+        var url = "http://longview.carlosguerrero.com:8090/get/" + value + "/" + nvalues
+        console.log(url)
+        d3.json(url, function(err, server_logs) {
+          server_logs.reverse()
 
-    _.each(server_list, function(value, list_key, list) {
-      servers_logs = []
-      d3.json("http://longview.carlosguerrero.com:8090/get/" + value + "/" + (120 * hours), function(err, server_logs) {
-        server_logs.reverse()
-        _.each(server_keys, function(each_server_key) {
+          function process_logs(server_logs, servers_logs) {
+            _.each(server_keys, function(each_server_key) {
 
-          _.each(server_logs, function(value, key, list) {
+              _.each(server_logs, function(value, key, list) {
 
-            if (servers_logs[key] == undefined) {
-              servers_logs[key] = {}
-            }
-            var max_val = 0
-            if (each_server_key.indexOf('Mem') > -1) {
-              max_val = value.Memory_real_used + value.Memory_real_free
-            }
+                if (servers_logs[key] == undefined) {
+                  servers_logs[key] = {}
+                }
+                var max_val = 0
+                if (each_server_key.indexOf('Mem') > -1) {
+                  max_val = value.Memory_real_used + value.Memory_real_free
+                }
 
-            if (each_server_key.indexOf('load') > -1) {
-              max_val = 1.25
-            }
+                if (each_server_key.indexOf('load') > -1) {
+                  max_val = 1.30
+                }
 
-            servers_logs[key][value.apikey + each_server_key] = {
-              value: value[each_server_key],
-              max_val: max_val
-            };
-          })
+                servers_logs[key][value.apikey + each_server_key] = {
+                  value: value[each_server_key],
+                  max_val: max_val
+                };
+              })
 
-        })
+            })
 
-        generateBall(servers_logs, config.ball_radius, 1, type, colors)
-
-      })
-
-    })
-
-  }
-
-  function get_all_last_hour_bandwidth() {
-    server_list = _.map(user.services[0].servers, function(each) {
-        return each.longview
-      })
-      // server_list = ['88F48041-B897-A5FB-88B706D42D45A504', '88F48041-B897-A5FB-88B706D42D45A502']
-      //var server_list = []
-      //server_list.push(server)
-    _.each(server_list, function(value, server_position_in_list, list) {
-      servers_logs = []
-      d3.json("http://longview.carlosguerrero.com:8090/get/" + value + "/" + (120), function(err, server_logs) {
-        server_logs.reverse()
-        _.each(server_logs, function(value, i, list) {
-
-          if (servers_logs[i] == undefined) {
-            servers_logs[i] = {}
+            return servers_logs
           }
 
-          servers_logs[i][value.apikey] = {
-            value: value.rx_Kbps,
-          };
-        })
 
-        console.log(main_colors)
-        generateBall(servers_logs, config.ball_radius, 1, undefined, main_colors)
+          servers_logs = process_logs(server_logs, servers_logs)
+          generateBall(servers_logs, config.ball_radius, 1, type, colors, update_count)
+
+
+        })
       })
-    })
+
+      setTimeout(function() {
+        trigger_get_of(true)
+      }, 10000)
+      update_count++
+
+    }
+
+    trigger_get_of(false)
+
+
   }
+
+  function get_all_last_hour_bandwidth2() {
+    server_list = _.map(user.services[0].servers, function(each) {
+      return each.longview
+    })
+    get_of(server_list, ['tx_Kbps'], 1, undefined, main_colors)
+  }
+
 
 
   function get_last_day() {
@@ -541,9 +628,7 @@
   }
 
   function nodes_tree(width, height) {
-    var treeContainer = d3.select("body").append("svg")
-      .attr("width", width)
-      .attr("height", height);
+
 
     var tree_container = treeContainer.selectAll("text.title").data(user.services)
       .enter().append('text')
@@ -553,17 +638,18 @@
         return 10
       })
       .attr("y", function(d, i) {
-        return 20 + 40 * i;
+        return 30 + 40 * i;
       })
       .text(function(d, i) {
         return d.name;
       })
       .attr("font-family", "sans-serif")
       .attr("font-size", "20px")
-      .attr("fill", "black")
+      .attr("fill", "white")
 
 
     _.each(user.services, function(service) {
+      servers_vertical_separation = 80
 
       var tree_container = treeContainer.selectAll("text.server").data(service.servers)
         .enter().append('g').append('text')
@@ -573,7 +659,7 @@
           return 20
         })
         .attr("y", function(d, i) {
-          return 60 + 40 * i;
+          return 60 + servers_vertical_separation * i;
         })
         .text(function(d, i) {
           return d.pm2;
@@ -588,16 +674,35 @@
           get_of(test_list, ['load', 'Memory_real_used'], 1, 'twin', ["rgb(255, 215, 0)", "#00aa00"])
         })
 
+      var tree_container_colors = treeContainer.selectAll("rect.server").data(service.servers)
+        .enter().append('rect')
+
+      tree_container_colors
+        .attr('x', 10)
+        .attr('y', function(d, i) {
+          return 40 + servers_vertical_separation * i
+        })
+        .attr('height', 79)
+        .attr('width', 5)
+        .style('fill', function(d, i) {
+          return main_colors[i]
+        })
+
 
       // servers graphs
       // each of the servers
       servers_graphs_array = []
       servers_graphs = {}
       ports_list_containers = []
+      ips_container = []
+      details_painted = {}
+      details_list_containers = {}
+
 
       function update_values_every(timeout, servers, key, order) {
         var painted = false;
         var tree_container = {}
+        var labels_container = {}
         var items = [{
             key: "load",
             pos: 0
@@ -605,12 +710,21 @@
             key: "Memory_real_used",
             pos: 1
           }, {
-            key: "swap",
-            pos: 1
+            //   key: "swap",
+            //   pos: 1
+            // }, {
+            key: "rx_Kbps",
+            pos: 2
+          }, {
+            key: "tx_Kbps",
+            pos: 3
           }, {
             key: "ports",
-            pos: 2,
+            pos: 4,
             type: 'text'
+          }, {
+            key: "details",
+            type: "details"
           }]
           // var items = [{key: "load", pos: 0}, {key: "memory", pos:1}]
 
@@ -631,23 +745,37 @@
                   return d.longview
                 })
                 .enter().append('rect')
+
               tree_container[key].attr("x", 150)
                 .attr("y", function(d, i) {
-                  return 45 + 40 * i;
+                  return 45 + servers_vertical_separation * i;
                 })
-                .attr("width", 1)
+                .attr("width", 0)
                 .attr("height", 10)
-                .on('click', function(d){
+                .on('click', function(d) {
                   console.log(d)
-                  if(key.indexOf('Mem')>-1){
+                  if (key.indexOf('Mem') > -1) {
                     bars_color = 'rgb(255, 215, 0)'
                   } else {
                     bars_color = '#00aa00'
                   }
                   get_of([d.apikey], [key], 1, undefined, [bars_color])
                 })
-            }
 
+              labels_container[key] = treeContainer.selectAll("label." + key).data(servers_graphs_array, function(d) {
+                  return d.longview
+                })
+                .enter().append('text').attr("font-size", "8.5px")
+
+              labels_container[key].attr("x", 150)
+                .attr("y", function(d, i) {
+                  return 45 + servers_vertical_separation * i;
+                })
+                .attr('text-anchor', 'end')
+
+
+
+            }
           })
 
           painted = true
@@ -667,91 +795,185 @@
                   type = item.type
 
                   if (type != undefined && type.indexOf('text') > -1) {
-
-                    var this_server = server_log[0].apikey //.replace(/-/g,'')
-                    var pos = Object.keys(servers_graphs).indexOf(each_server.longview)
-
-                    server_log[0].Ports_listening = _.sortBy(server_log[0].Ports_listening, function(each) {
-                      return each.port
-                    })
-
-                    _.each(server_log[0].Ports_listening, function(each) {
-                      each.pos = pos
-                    })
-
-                    if (ports_list_containers[this_server] == undefined) {
-                      ports_list_containers[this_server] = treeContainer.selectAll("text.ports" + this_server)
-                        .data(server_log[0].Ports_listening)
-                        .enter().append('text')
-
-                      this_ports_list_container = ports_list_containers[this_server]
-                    } else {
-                      this_ports_list_container = ports_list_containers[this_server].data(server_log[0].Ports_listening).transition()
-                    }
-
-                    this_ports_list_container.attr("y", 10).attr("font-size", "9px")
-                      .attr("x", function(d, i) {
-                        return 150 + i * 40
-                      })
-                      .attr("y", function(d, i) {
-                        return 72 + d.pos * 40
-                      })
-                      .style("fill", function(d) {
-                        if (d.ip.indexOf('127.0.0.1') > -1) {
-                          return 'grey'
-                        } else {
-                          return 'black'
-                        }
-                      })
-                      .text(function(d) {
-                        return d.port
-                      })
-                      // .append("svg:title").text(function(d){return d.name + " ("+d.type+" "+d.ip+":"+d.port+") "+d.user });
-
+                    // if is text, is the ports list
 
 
                   } else {
-                    servers_graphs[each_server.longview] = server_log[0]
-                    servers_graphs[each_server.longview].longview = servers_graphs[each_server.longview].apikey
-                    servers_graphs_array = []
-                    _.each(servers_graphs, function(each) {
-                      servers_graphs_array.push(each)
-                    })
 
-                    tree_container[key].data(servers_graphs_array, function(d) {
-                        return d.longview
-                      })
-                      .transition().attr("x", 150)
-                      .attr("y", function(d, i) {
-                        return 43 + 40 * i + (10 * order);
-                      })
-                      .attr("width", function(d, i) {
-                        if (d.timestamp) {
+                    if (type == undefined) {
+
+                      var bar_max_width = width * 0.5
+                      servers_graphs[each_server.longview] = server_log[0]
+                      servers_graphs[each_server.longview].longview = servers_graphs[each_server.longview].apikey
+                      servers_graphs_array = []
+                      _.each(servers_graphs, function(each) {
+                          servers_graphs_array.push(each)
+                        })
+                        //
+                      tree_container[key].data(servers_graphs_array, function(d) {
+                          return d.longview
+                        })
+                        .transition().attr("x", 150)
+                        .attr("y", function(d, i) {
+                          return 45 + servers_vertical_separation * i + (10 * order);
+                        })
+                        .attr("width", function(d, i) {
+                          if (d.timestamp) {
+                            if (key.indexOf('Mem') > -1) {
+                              var memory_total = d.Memory_real_free + d.Memory_real_used
+                              return (d.Memory_real_used / memory_total * bar_max_width)
+                            }
+                            if (key.indexOf('swap') > -1) {
+                              var memory_total = d.Memory_real_free + d.Memory_real_used
+                              return (d.Memory_swap_used / memory_total * bar_max_width)
+                            }
+                            if (key.indexOf('Kbps') > -1) {
+                              return d[key] / 100000 * bar_max_width
+                            }
+                            return d[key] * bar_max_width
+                          } else {
+                            return 1
+                          }
+                        })
+                        .style("fill", function() {
+                          // var flag = ["#7f3b08","#b35806","#e08214","#fdb863","#fee0b6","#f7f7f7","#d8daeb","#b2abd2","#8073ac","#542788","#2d004b"]
+
+                          if (key.indexOf('load') > -1) {
+                            return flag[0];
+                          }
                           if (key.indexOf('Mem') > -1) {
-                            var memory_total = d.Memory_real_free + d.Memory_real_used
-                            return (d.Memory_real_used / memory_total * width * 0.7)
+                            return flag[1];
                           }
                           if (key.indexOf('swap') > -1) {
-                            var memory_total = d.Memory_real_free + d.Memory_real_used
-                            return (d.Memory_swap_used / memory_total * width * 0.7)
+                            return flag[1];
                           }
-                          return d[key] * width * 0.7
+                          if (key.indexOf('rx') > -1) {
+                            return flag[2];
+                          }
+                          if (key.indexOf('tx') > -1) {
+                            return flag[3];
+                          }
+                        })
+                        .attr("height", 10);
+
+                      labels_container[key].data(servers_graphs_array, function(d) {
+                          return d.longview
+                        }).transition()
+                        .attr("y", function(d, i) {
+                          return 52 + servers_vertical_separation * i + (10 * order);
+                        })
+                        .attr("x", function(d, i) {
+                          // return 150;
+                          if (d.timestamp) {
+                            if (key.indexOf('Mem') > -1) {
+                              var memory_total = d.Memory_real_free + d.Memory_real_used
+                              return 145 + (d.Memory_real_used / memory_total * bar_max_width)
+                            }
+                            if (key.indexOf('swap') > -1) {
+                              var memory_total = d.Memory_real_free + d.Memory_real_used
+                              return 145 + (d.Memory_swap_used / memory_total * bar_max_width)
+                            }
+                            if (key.indexOf('Kbps') > -1) {
+                              return 145 + d[key] / 100000 * bar_max_width
+                            }
+                            if (key.indexOf('load') > -1) {
+                              return 145 + d[key] * bar_max_width
+                            }
+                          } else {
+                            return 1
+                          }
+                        })
+                        .style('fill', 'white')
+                        .text(function(d) {
+                          var val
+                          if (d.timestamp) {
+                            if (key.indexOf('Mem') > -1) {
+                              var memory_total = d.Memory_real_free + d.Memory_real_used
+                              val = (d.Memory_real_used / memory_total * bar_max_width)
+                            }
+                            if (key.indexOf('swap') > -1) {
+                              var memory_total = d.Memory_real_free + d.Memory_real_used
+                              val = (d.Memory_swap_used / memory_total * bar_max_width)
+                            }
+                            if (key.indexOf('Kbps') > -1) {
+                              val = d[key] / 1000 * bar_max_width
+                            }
+                            if (key.indexOf('load') > -1) {
+                              val = d[key] * bar_max_width
+                            }
+                          } else {
+                            val = 1
+                          }
+                          var unit = '%'
+                          if (key.indexOf('Kbps') > -1) {
+                            unit = 'Mbps'
+                            val = val / 100
+                          }
+                          return key + ": " + parseInt(val / bar_max_width * 100) + unit
+
+                        })
+
+                    } else {
+                      if (type.indexOf('details') > -1) {
+                        var this_server = server_log[0].apikey //.replace(/-/g,'')
+                        var pos = Object.keys(servers_graphs).indexOf(each_server.longview)
+
+
+                        //moving here the ports info generation
+
+                        server_log[0].Ports_listening = _.sortBy(server_log[0].Ports_listening, function(each) {
+                          return each.port
+                        })
+
+                        _.each(server_log[0].Ports_listening, function(each) {
+                          each.pos = pos
+                        })
+                        ports_better_data_text = ""
+
+                        _.each(server_log[0].Ports_listening, function(each_port) {
+                          if (each_port.ip.indexOf('127.0.0.1') == -1) {
+                            ports_better_data_text += each_port.name.split(" ")[0] + "(" + each_port.port + ") "
+                          }
+                        })
+
+                        details = []
+                        details.push(server_log[0].SysInfo_os_distversion + " " + server_log[0].SysInfo_type + " " + server_log[0].SysInfo_arch)
+                        details.push(server_log[0].SysInfo_kernel)
+                        details.push(server_log[0].SysInfo_cpu_type)
+                        details.push("Opened ports: " + ports_better_data_text)
+
+
+                        if (details_list_containers[this_server] == undefined) {
+                          details_list_containers[this_server] = treeContainer.selectAll("text.details" + this_server)
+                            .data(details)
+                            .enter().append('text')
+
+                          this_details_list_container = details_list_containers[this_server]
                         } else {
-                          return 1
+                          this_details_list_container = details_list_containers[this_server]
+                            .data(details).transition()
                         }
-                      })
-                      .style("fill", function() {
-                        if (key.indexOf('load') > -1) {
-                          return '#00aa00';
-                        }
-                        if (key.indexOf('Mem') > -1) {
-                          return 'gold';
-                        }
-                        if (key.indexOf('swap') > -1) {
-                          return 'red';
-                        }
-                      })
-                      .attr("height", 10);
+
+                        this_details_list_container.attr("y", 10).attr("font-size", "9px")
+                          .attr("x", function(d, i) {
+                            return 20
+                          })
+                          .attr("y", function(d, i) {
+                            //return 50 + servers_vertical_separation * i + (10 * order);
+
+                            return pos * servers_vertical_separation + 68 + 10 + 10 * i
+                          })
+                          .style("fill", 'white')
+                          .text(function(d) {
+                            return d
+                          })
+                          // .append("svg:title").text(function(d){return d.name + " ("+d.type+" "+d.ip+":"+d.port+") "+d.user });
+
+
+
+                      }
+                    }
+
 
                   }
 
@@ -794,12 +1016,13 @@
 
     test_list = ['88F48041-B897-A5FB-88B706D42D45A504']
       //get_of(test_list, ['load', 'Memory_real_used'], 1)
-    get_all_last_hour_bandwidth()
     nodes_tree(600, 600)
+    get_all_last_hour_bandwidth2()
+
   }
 </script>
 
-<body>
+<body style="background-color:black;">
   <button id="change1" type="button" class="alert button">24h</button>
   <button id="allbandwidth" type="button" class="alert button">All</button>
 </body>
