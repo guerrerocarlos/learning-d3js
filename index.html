@@ -32,9 +32,6 @@
   ]
 
 
-
-
-
   function randomArray(length, max) {
     return Array.apply(null, Array(length)).map(function(_, i) {
       return Math.round(Math.random() * max);
@@ -59,7 +56,7 @@
   //The SVG Container
   var treeContainer = d3.select("body").append("svg")
     .attr("width", 600)
-    .attr("height", 600);
+    .attr("height", 800);
   var svgContainer = d3.select("body").append("svg")
     .attr("width", 600)
     .attr("height", 600)
@@ -73,9 +70,15 @@
   var last_hours_positions
   var existing_arcs = []
   var previously_itemized_values = []
+  var itemized_values_indexed = {}
   var divitions
   var percentage_elapsed
   var saved_data
+  var circle_percentage_elapsed
+  var seconds_circle
+  var seconds_circle_color = 'yellow'
+  var pending_timeout
+
 
   var generateBall = function(data, radio, ihours, type, assigned_colors, update_count) {
 
@@ -88,6 +91,26 @@
       var scaleit = []
     }
 
+
+    function update_cicle_percentage() {
+      var currentDate = new Date()
+      var miliseconds_at_midnight = new Date(currentDate.getUTCFullYear() + '-' + (currentDate.getMonth() + 1) + '-' + currentDate.getDate())
+      var miliseconds_elapsed = currentDate.getTime() - miliseconds_at_midnight.getTime()
+      var circle_percentage_elapsed = miliseconds_elapsed / (1000 * 60 * 60 * 24)
+
+      if (ihours == 1) {
+        var miliseconds_at_last_hour = new Date(currentDate.getUTCFullYear() + '-' + (currentDate.getMonth() + 1) + '-' + currentDate.getDate() + ' ' + currentDate.getHours() + ':00:00')
+        var miliseconds_elapsed = currentDate.getTime() - miliseconds_at_midnight.getTime()
+        var circle_percentage_elapsed = miliseconds_elapsed / (1000 * 60 * 60)
+      }
+      var to_rotate = circle_percentage_elapsed * 360
+
+      return to_rotate
+    }
+
+    var to_rotate = update_cicle_percentage()
+
+
     if (!background_painted) {
       var circle = svgContainer.append('circle')
         .attr('id', 'circleBG')
@@ -95,7 +118,32 @@
         .attr('cx', radio)
         .attr('cy', radio)
         .attr('fill', '#222222');
+
+      seconds_circle = svgContainer.append('circle')
+        .attr('id', 'runningCircle')
+        .attr('r', 3)
+        .attr('cx', 0)
+        .attr('cy', -295)
+        .attr('fill', 'grey')
+        .attr("transform", "translate(300,300) rotate(" + to_rotate + ") ")
+
+      setInterval(function() {
+        if (seconds_circle_color.indexOf('yellow') > -1) {
+          seconds_circle_color = 'grey'
+        } else {
+          seconds_circle_color = 'yellow'
+        }
+        var to_rotate = update_cicle_percentage()
+        seconds_circle
+          .attr('fill', seconds_circle_color)
+          .attr("transform", "translate(300,300) rotate(" + to_rotate + ") ")
+      }, 1000)
+
     }
+
+
+
+
     background_painted = true
 
     if (last_ihours != ihours) {
@@ -257,27 +305,30 @@
 
       if (update_count == 0) {
         var itemized_data_values = _.map(data, function(eachdata) {
-          if (eachdata[item]['max_val'] > 0) {
-            return eachdata[item]['max_val']
+          if (eachdata[item] != undefined) {
+            if (eachdata[item]['max_val'] > 0) {
+              return eachdata[item]['max_val']
+            } else {
+              return eachdata[item]['value']
+            }
           } else {
-            return eachdata[item]['value']
+            return 1;
           }
+
         })
         saved_data = data
       } else {
-        console.log('saved_data1')
-        console.log(saved_data)
         saved_data[update_count - 1][item] = data[0][item]
-        console.log('saved_data2')
-        console.log(saved_data)
 
         var itemized_data_values = _.map(saved_data, function(eachdata) {
-          if (eachdata[item]['max_val'] > 0) {
-            return eachdata[item]['max_val']
-          } else {
-            return eachdata[item]['value']
-          }
-        })
+            if (eachdata[item]) {
+              if (eachdata[item]['max_val'] > 0) {
+                return eachdata[item]['max_val']
+              } else {
+                return eachdata[item]['value']
+              }
+            }
+          })
           // itemized_data[itemized_data.length - update_count]
       }
 
@@ -316,102 +367,162 @@
     }
 
     _.map(items, function(item, itemIndex) {
-      all_previously_existing_items.splice(all_previously_existing_items.indexOf(itemIndex.toString()), 1)
-      itemized_values = []
+        all_previously_existing_items.splice(all_previously_existing_items.indexOf(itemIndex.toString()), 1)
+        itemized_values = []
 
-      if (update_count == 0) {
-        var itemized_data = _.map(data, function(eachdata) {
-          return eachdata[item]
-        })
-      } else {
-
-        var itemized_data = _.map(saved_data, function(eachdata) {
+        if (update_count == 0) {
+          var itemized_data = _.map(data, function(eachdata) {
             return eachdata[item]
           })
-          // itemized_data[itemized_data.length - update_count]
-      }
-
-
-      var pos = 0;
-      for (i = 0; i < 2 * Math.PI; i = i + 2 * Math.PI / divitions) {
-        if (itemized_data[pos] != undefined && typeof(itemized_data[pos]['value']) == 'number') {
-          if (total_values[pos] == undefined) {
-            total_values[pos] = 0
-          }
-
-          if (type == undefined) {
-            value = scaleit(itemized_data[pos]['value'])
-          } else {
-            value = scaleit[itemIndex](itemized_data[pos]['value'])
-          }
-
-
-          if (value < 0) {
-            value = -1 * value
-          }
-          var transparency = 1 - (pos-update_count) / (divitions)
-          if(transparency>1){
-            transparency = transparency - parseInt(transparency)
-          }
-
-          itemized_values.push({
-            "pos": i,
-            "itemIndex": itemIndex,
-            "value": value,
-            "previousValue": total_values[pos],
-            //"transparency": 0.7
-            "transparency": 1 - transparency + 0.3
-          })
-          total_values[pos] = total_values[pos] + value
-        }
-        pos++;
-
-      }
-      var to_rotate = -180 + percentage_elapsed * 360
-      if (ihours == 1) {
-        var to_rotate = percentage_elapsed * 360
-      }
-
-
-      function paint_arcs(itemized_values, radio, to_rotate, itemIndex, server_name) {
-        if (type == undefined) {
-          var arc = d3.svg.arc()
-            .innerRadius(function(d) {
-              // return d.previousValue
-              return d.previousValue;
-            })
-            .outerRadius(function(d) {
-              return d.value + d.previousValue;
-            })
-            .startAngle(function(d) {
-              return d.pos
-            })
-            .endAngle(function(d) {
-              return d.pos + 2 * Math.PI / (divitions)
-            });
         } else {
-          var arc = d3.svg.arc()
-            .innerRadius(function(d) {
-              // return d.previousValue
-              return 0;
+
+          var itemized_data = _.map(saved_data, function(eachdata) {
+              return eachdata[item]
             })
-            .outerRadius(function(d) {
-              return d.value;
-            })
-            .startAngle(function(d) {
-              return d.pos + (2 * Math.PI / (divitions) / 2) * (d.itemIndex - 1)
-            })
-            .endAngle(function(d) {
-              return d.pos + 2 * Math.PI / (divitions) / 2 + (2 * Math.PI / (divitions) / 2) * (d.itemIndex - 1)
-            });
+            // itemized_data[itemized_data.length - update_count]
         }
 
 
-        if (previously_itemized_values[itemIndex] == null) {
-          existing_arcs[itemIndex] = svgContainer.selectAll("g").data(itemized_values, function(d) {
-              return d.pos
-            }).enter().append('path')
+        var pos = 0;
+        for (i = 2 * Math.PI; i > 0; i = i - 2 * Math.PI / divitions) {
+          if (itemized_data[pos] != undefined && typeof(itemized_data[pos]['value']) == 'number') {
+            if (total_values[pos] == undefined) {
+              total_values[pos] = 0
+            }
+
+            if (type == undefined) {
+              value = scaleit(itemized_data[pos]['value'])
+            } else {
+              value = scaleit[itemIndex](itemized_data[pos]['value'])
+            }
+
+
+            if (value < 0) {
+              value = -1 * value
+            }
+            var transparency = 1 - (1 - (pos - update_count) / (divitions))
+            if (transparency > 1) {
+              transparency = transparency - parseInt(transparency)
+            }
+
+            itemized_values.push({
+              "pos": i,
+              "i": pos,
+              "item": item,
+              "itemIndex": itemIndex,
+              "value": value,
+              "previousValue": total_values[pos],
+              //"transparency": 0.7
+              "transparency": 1 - transparency + 0.3
+            })
+            total_values[pos] = total_values[pos] + value
+          }
+          pos++;
+
+        }
+        var to_rotate = -180 + percentage_elapsed * 360
+        if (ihours == 1) {
+          var to_rotate = percentage_elapsed * 360
+        }
+
+
+        function paint_arcs(itemized_values, radio, to_rotate, itemIndex, server_name) {
+          if (type == undefined) {
+            var arc = d3.svg.arc()
+              .innerRadius(function(d) {
+                // return d.previousValue
+                return d.previousValue;
+              })
+              .outerRadius(function(d) {
+                return d.value + d.previousValue;
+              })
+              .startAngle(function(d) {
+                return d.pos
+              })
+              .endAngle(function(d) {
+                return d.pos + 2 * Math.PI / (divitions)
+              });
+          } else {
+            var arc = d3.svg.arc()
+              .innerRadius(function(d) {
+                // return d.previousValue
+                return 0;
+              })
+              .outerRadius(function(d) {
+                return d.value;
+              })
+              .startAngle(function(d) {
+                return d.pos + (2 * Math.PI / (divitions) / 2) * (d.itemIndex - 1)
+              })
+              .endAngle(function(d) {
+                return d.pos + 2 * Math.PI / (divitions) / 2 + (2 * Math.PI / (divitions) / 2) * (d.itemIndex - 1)
+              });
+          }
+
+          itemized_values_indexed[itemIndex] = itemized_values
+          console.log('itemized_values_indexed')
+          console.log(itemized_values_indexed)
+          all_itemized_values = []
+          _.each(itemized_values_indexed, function(each_itemized_values){
+            _.each(each_itemized_values, function(each_each){
+              all_itemized_values.push(each_each)
+            })
+          })
+          console.log('all_itemized_values.length')
+          console.log(all_itemized_values.length)
+          console.log(all_itemized_values)
+
+          var all_itemized_values = [
+            {
+              "pos": 0,
+              "i": 0,
+              "item": 'carlos',
+              "itemIndex": 0,
+              "value": 200,
+              "previousValue": 0,
+              "transparency": 0.5
+            },
+            {
+              "pos": 1,
+              "i": 1,
+              "item": 'carlos',
+              "itemIndex": 0,
+              "value": 300,
+              "previousValue": 0,
+              "transparency": 0.5
+            },
+            {
+              "pos": 2,
+              "i": 2,
+              "item": 'carlos',
+              "itemIndex": 1,
+              "value": 200,
+              "previousValue": 100,
+              "transparency": 0.5
+            },
+            {
+              "pos": 3,
+              "i": 3,
+              "item": 'carlos',
+              "itemIndex": 1,
+              "value": 200,
+              "previousValue": 100,
+              "transparency": 0.5
+            }
+          ]
+
+          console.log(existing_arcs)
+          var svg_container = svgContainer.selectAll("g").data(all_itemized_values, function(d, i) {
+            //console.log(i)
+            return i
+            return d.item+d.i
+          })
+
+
+          svg_container.enter().append('path')
             .attr("d", arc).attr("opacity", function(d) {
+              // console.log("adding new: ")
+              // console.log(d)
               return d.transparency
             })
             .attr("transform", "translate(" + radio + "," + radio + ") rotate(" + to_rotate + ") ")
@@ -420,39 +531,66 @@
               console.log(d)
             })
 
-          previously_itemized_values[itemIndex] = itemized_values
-        } else {
-          existing_arcs[itemIndex].data(itemized_values).transition()
-            .duration(1000)
-            .attr("d", arc).attr("opacity", function(d) {
-              return d.transparency
-            })
-            .attr("transform", "translate(" + radio + "," + radio + ") rotate(" + to_rotate + ") ")
-            .attr('fill', assigned_colors[itemIndex]);
+            console.log('svgContainer.selectAll("g")')
+            console.log(svgContainer.selectAll("g").data(all_itemized_values))
+            console.log('svg_container.enter()')
+            console.log(svg_container.enter())
 
-          // existing_arcs[itemIndex].data(itemized_values, function(d) {
-          //     return d.id
-          //   }).enter().append('path')
+          // existing_arcs[itemIndex]
+          //   .transition()
+          //   .duration(1000)
           //   .attr("d", arc).attr("opacity", function(d) {
           //     return d.transparency
           //   })
           //   .attr("transform", "translate(" + radio + "," + radio + ") rotate(" + to_rotate + ") ")
           //   .attr('fill', assigned_colors[itemIndex]);
 
+          svg_container.exit().transition()
+          .remove();
+
+
+
+          // if (previously_itemized_values[itemIndex] == null) {
+          //   existing_arcs[itemIndex] = svgContainer.selectAll("g").data(itemized_values, function(d) {
+          //       return d.pos
+          //     }).enter().append('path')
+          //     .attr("d", arc).attr("opacity", function(d) {
+          //       return d.transparency
+          //     })
+          //     .attr("transform", "translate(" + radio + "," + radio + ") rotate(" + to_rotate + ") ")
+          //     .attr('fill', assigned_colors[itemIndex])
+          //     .on('click', function(d) {
+          //       console.log(d)
+          //     })
+          //
+          //   previously_itemized_values[itemIndex] = itemized_values
+          // } else {
+          //
+          //
+          //   existing_arcs[itemIndex].data(itemized_values).transition()
+          //     .duration(1000)
+          //     .attr("d", arc).attr("opacity", function(d) {
+          //       return d.transparency
+          //     })
+          //     .attr("transform", "translate(" + radio + "," + radio + ") rotate(" + to_rotate + ") ")
+          //     .attr('fill', assigned_colors[itemIndex]);
+          //
+          //
+          // }
+
         }
 
+        paint_arcs(itemized_values, radio, to_rotate, itemIndex, item)
 
+      })
+      // if (update_count == 0) {
+      //   _.each(all_previously_existing_items, function(each) {
+      //     existing_arcs[each].data([]).exit()
+      //       .transition()
+      //       .attr("opacity", 0)
+      //   })
+      // }
 
-      }
-
-      paint_arcs(itemized_values, radio, to_rotate, itemIndex, item)
-
-    })
-    _.each(all_previously_existing_items, function(each) {
-      existing_arcs[each].data([]).exit()
-        .transition()
-        .attr("opacity", 0)
-    })
 
 
 
@@ -478,9 +616,23 @@
         }, {
           longview: '88F48041-B897-A5FB-88B706D42D45A505',
           pm2: 'holaproxy5'
+        },
+        // {
+        //   longview: '88F48041-B897-A5FB-88B706D42D45A506',
+        //   pm2: 'holaproxy6'
+        // },
+        {
+          longview: '88F48041-B897-A5FB-88B706D42D45A507',
+          pm2: 'holaproxy7'
         }, {
-          longview: '88F48041-B897-A5FB-88B706D42D45A506',
-          pm2: 'holaproxy6'
+          longview: '88F48041-B897-A5FB-88B706D42D45A508',
+          pm2: 'holaproxy8'
+        }, {
+          longview: '88F48041-B897-A5FB-88B706D42D45A509',
+          pm2: 'holaproxy9'
+        }, {
+          longview: '88F48041-B897-A5FB-88B706D42D45A510',
+          pm2: 'holaproxy10'
         }
 
 
@@ -526,25 +678,61 @@
     })
   }
 
-  function get_of(server_list, server_keys, hours, type, colors) {
+  function get_of(server_list, server_keys, hours, type, colors, fake_hours) {
     var update_count = -1
+    clearTimeout(pending_timeout)
+    var count = 1
     var trigger_get_of = function(update) {
+
       _.each(server_list, function(value, list_key, list) {
+
         servers_logs = []
         var nvalues
         if (update) {
           nvalues = 1
         } else {
           nvalues = (120 * hours)
-          nvalues = 10
         }
         var url = "http://longview.carlosguerrero.com:8090/get/" + value + "/" + nvalues
         console.log(url)
         d3.json(url, function(err, server_logs) {
-          server_logs.reverse()
+          //server_logs.reverse()
+
 
           function process_logs(server_logs, servers_logs) {
+            var missing = nvalues - servers_logs.length
             _.each(server_keys, function(each_server_key) {
+
+              if (fake_hours > 0) {
+                rate = hours / fake_hours // 4
+
+                var summingit = 0
+                var count = 0
+                var apikey = ""
+
+                new_server_logs = []
+                  //console.log(server_logs)
+                  //_.each(Object.keys(server_logs[0]), function(each_key) {
+                _.each(server_logs, function(value, key, list) {
+                    summingit = summingit + value[each_server_key]
+                    apikey = value['apikey']
+                    count++
+                    if (count >= rate) {
+                      var new_value = {}
+                      new_value[each_server_key] = summingit / rate
+                      new_value['apikey'] = apikey
+                      new_server_logs.push(new_value)
+                      count = 0
+                      summingit = 0
+                    }
+                  })
+                  //})
+
+                server_logs = new_server_logs
+                  //console.log(server_logs)
+
+                //console.log(server_logs.length)
+              }
 
               _.each(server_logs, function(value, key, list) {
 
@@ -567,35 +755,62 @@
               })
 
             })
-
             return servers_logs
           }
 
 
           servers_logs = process_logs(server_logs, servers_logs)
-          generateBall(servers_logs, config.ball_radius, 1, type, colors, update_count)
+
+          if (update_count > 0) {
+            //if(server_list.length == servers_logs.length){
+            generateBall(servers_logs, config.ball_radius, 1, type, colors, update_count)
+              //}
+          } else {
+            setTimeout(function(){
+              generateBall(servers_logs, config.ball_radius, 1, type, colors, update_count)
+            }, 2000*count)
+            count ++
+          }
+
+
 
 
         })
+
+        if (update_count > nvalues) {
+          update_count = 1;
+        }
       })
 
-      setTimeout(function() {
-        trigger_get_of(true)
-      }, 10000)
+      // var pending_timeout = setTimeout(function() {
+      //   console.log("triggering automatic update... get of")
+      //   trigger_get_of(true)
+      // }, 30000)
       update_count++
+
+
 
     }
 
     trigger_get_of(false)
 
-
   }
 
   function get_all_last_hour_bandwidth2() {
     server_list = _.map(user.services[0].servers, function(each) {
+        return each.longview
+      })
+      //server_list = [server_list[0]]
+      //server_list = [server_list[0]]
+      server_list = [server_list[0], server_list[1]]
+    get_of(server_list, ['tx_Kbps'], 1, undefined, main_colors)
+  }
+
+  function get_all_last_day_bandwidth2() {
+    server_list = _.map(user.services[0].servers, function(each) {
       return each.longview
     })
-    get_of(server_list, ['tx_Kbps'], 1, undefined, main_colors)
+    get_of(server_list, ['tx_Kbps'], 2, undefined, main_colors)
   }
 
 
@@ -767,6 +982,8 @@
                 })
                 .enter().append('text').attr("font-size", "8.5px")
 
+
+
               labels_container[key].attr("x", 150)
                 .attr("y", function(d, i) {
                   return 45 + servers_vertical_separation * i;
@@ -855,7 +1072,7 @@
                           }
                         })
                         .attr("height", 10);
-
+                      var local_result
                       labels_container[key].data(servers_graphs_array, function(d) {
                           return d.longview
                         }).transition()
@@ -863,27 +1080,57 @@
                           return 52 + servers_vertical_separation * i + (10 * order);
                         })
                         .attr("x", function(d, i) {
-                          // return 150;
                           if (d.timestamp) {
                             if (key.indexOf('Mem') > -1) {
                               var memory_total = d.Memory_real_free + d.Memory_real_used
-                              return 145 + (d.Memory_real_used / memory_total * bar_max_width)
+                              return 150 + (d.Memory_real_used / memory_total * bar_max_width)
                             }
                             if (key.indexOf('swap') > -1) {
                               var memory_total = d.Memory_real_free + d.Memory_real_used
-                              return 145 + (d.Memory_swap_used / memory_total * bar_max_width)
+                              return 150 + (d.Memory_swap_used / memory_total * bar_max_width)
                             }
                             if (key.indexOf('Kbps') > -1) {
-                              return 145 + d[key] / 100000 * bar_max_width
+                              return 150 + d[key] / 100000 * bar_max_width
                             }
                             if (key.indexOf('load') > -1) {
-                              return 145 + d[key] * bar_max_width
+                              return 150 + d[key] * bar_max_width
                             }
                           } else {
                             return 1
                           }
                         })
-                        .style('fill', 'white')
+                        .attr('text-anchor', function(d, i) {
+
+                          var val
+                          if (d.timestamp) {
+                            if (key.indexOf('Mem') > -1) {
+                              var memory_total = d.Memory_real_free + d.Memory_real_used
+                              val = (d.Memory_real_used / memory_total * bar_max_width)
+                            }
+                            if (key.indexOf('swap') > -1) {
+                              var memory_total = d.Memory_real_free + d.Memory_real_used
+                              val = (d.Memory_swap_used / memory_total * bar_max_width)
+                            }
+                            if (key.indexOf('Kbps') > -1) {
+
+                              val = d[key] / 80000 * bar_max_width
+                            }
+                            if (key.indexOf('load') > -1) {
+                              val = d[key] * bar_max_width
+                            }
+                          } else {
+                            val = 1
+                          }
+
+                          if (val > 80) {
+                            return 'end'
+                          } else {
+                            return 'start'
+                          }
+
+                        })
+
+                      .style('fill', 'white')
                         .text(function(d) {
                           var val
                           if (d.timestamp) {
@@ -995,10 +1242,6 @@
 
       update_values_every(30, service.servers, 'load', 0)
 
-
-      // _.each(service.servers, function(server){
-      //
-      // })
     })
   }
 
@@ -1006,12 +1249,12 @@
     var button = document.getElementById('change1')
     button.addEventListener("click", function() {
       console.log('click action...')
-      get_last_day()
+      get_all_last_day_bandwidth2()
     })
 
     var button = document.getElementById('allbandwidth')
     button.addEventListener("click", function() {
-      get_all_last_hour_bandwidth()
+      get_all_last_hour_bandwidth2()
     })
 
     test_list = ['88F48041-B897-A5FB-88B706D42D45A504']
