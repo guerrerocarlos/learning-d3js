@@ -60,7 +60,11 @@
   var svgContainer = d3.select("body").append("svg")
     .attr("width", 600)
     .attr("height", 600)
-    .style("margin-top", 20);
+    .style("margin-top", 20)
+    .append("g")
+    .attr("transform", "translate(300,300)");
+
+  var Gs = svgContainer.selectAll("g")
 
 
 
@@ -77,11 +81,13 @@
   var circle_percentage_elapsed
   var seconds_circle
   var seconds_circle_color = 'yellow'
-  var pending_timeout
+  var pending_timeouts = []
+  var itemized_values = {}
 
 
   var generateBall = function(data, radio, ihours, type, assigned_colors, update_count) {
 
+    console.log('generateBall')
 
     if (type == undefined) {
       var maxVal = 0
@@ -91,7 +97,7 @@
       var scaleit = []
     }
 
-
+    // updating to_rotate
     function update_cicle_percentage() {
       var currentDate = new Date()
       var miliseconds_at_midnight = new Date(currentDate.getUTCFullYear() + '-' + (currentDate.getMonth() + 1) + '-' + currentDate.getDate())
@@ -103,20 +109,19 @@
         var miliseconds_elapsed = currentDate.getTime() - miliseconds_at_midnight.getTime()
         var circle_percentage_elapsed = miliseconds_elapsed / (1000 * 60 * 60)
       }
-      var to_rotate = circle_percentage_elapsed * 360
+      return circle_percentage_elapsed
 
-      return to_rotate
     }
 
-    var to_rotate = update_cicle_percentage()
+    var to_rotate = update_cicle_percentage() * 360
 
-
+    // if there is no background circle, paint it, only once
     if (!background_painted) {
       var circle = svgContainer.append('circle')
         .attr('id', 'circleBG')
         .attr('r', radio)
-        .attr('cx', radio)
-        .attr('cy', radio)
+        .attr('cx', 0)
+        .attr('cy', 0)
         .attr('fill', '#222222');
 
       seconds_circle = svgContainer.append('circle')
@@ -125,27 +130,35 @@
         .attr('cx', 0)
         .attr('cy', -295)
         .attr('fill', 'grey')
-        .attr("transform", "translate(300,300) rotate(" + to_rotate + ") ")
+        .attr("transform", "rotate(" + to_rotate + ") ")
+      var second_count = 30
 
+      // automatically update every second the updating yellow
       setInterval(function() {
+        // console.log(second_count)
+        second_count--
+        if (second_count < 0) {
+          second_count = 30
+        }
         if (seconds_circle_color.indexOf('yellow') > -1) {
           seconds_circle_color = 'grey'
         } else {
           seconds_circle_color = 'yellow'
         }
-        var to_rotate = update_cicle_percentage()
+        var to_rotate = update_cicle_percentage() * 360
         seconds_circle
           .attr('fill', seconds_circle_color)
-          .attr("transform", "translate(300,300) rotate(" + to_rotate + ") ")
+          .attr("transform", "rotate(" + to_rotate + ") ")
+
       }, 1000)
+      background_painted = true
 
     }
 
 
 
 
-    background_painted = true
-
+    // paint hour marks
     if (last_ihours != ihours) {
 
       if (ihours == 24) {
@@ -205,7 +218,7 @@
           .attr("font-family", "sans-serif")
           .attr("font-size", (10 / 300 * radio) + "px")
           .attr("fill", "white")
-          .attr("transform", "translate(" + (radio * 0.95) + "," + (radio * 1.005) + ")");
+          .attr("text-anchor", "middle")
 
         last_hours_positions = hours_positions
 
@@ -270,72 +283,58 @@
           .attr("fill", "white")
           .attr("transform", "translate(" + (radio * 0.95) + "," + (radio * 1.005) + ")");
       }
+      last_ihours = ihours
     }
-    last_ihours = ihours
 
-
+    // if we are automatically updating do not update the percentage_elapsed
     if (update_count > 0) {
 
     } else {
       divitions = data.length;
-
+      percentage_elapsed = update_cicle_percentage()
       var currentDate = new Date()
-
-      var miliseconds_at_midnight = new Date(currentDate.getUTCFullYear() + '-' + (currentDate.getMonth() + 1) + '-' + currentDate.getDate())
-      var miliseconds_elapsed = currentDate.getTime() - miliseconds_at_midnight.getTime()
-      percentage_elapsed = miliseconds_elapsed / (1000 * 60 * 60 * 24)
-
-      if (ihours == 1) {
-        var miliseconds_at_last_hour = new Date(currentDate.getUTCFullYear() + '-' + (currentDate.getMonth() + 1) + '-' + currentDate.getDate() + ' ' + currentDate.getHours() + ':00:00')
-        var miliseconds_elapsed = currentDate.getTime() - miliseconds_at_midnight.getTime()
-        percentage_elapsed = miliseconds_elapsed / (1000 * 60 * 60)
-      }
     }
 
 
+    // end of background and hour marks
+
+    // start processing data and paint it
+
     // get the columns that come in the data by checking the first row
     var items = Object.keys(data[0])
+    console.log(items)
 
     items = _.sortBy(items, function(d) {
       return d
     })
 
     var total_values = {}
+      // calculate all scales
     _.map(items, function(item, itemIndex) {
 
       if (update_count == 0) {
-        var itemized_data_values = _.map(data, function(eachdata) {
-          if (eachdata[item] != undefined) {
-            if (eachdata[item]['max_val'] > 0) {
-              return eachdata[item]['max_val']
-            } else {
-              return eachdata[item]['value']
-            }
-          } else {
-            return 1;
-          }
-
-        })
         saved_data = data
+        var updated_data = data
       } else {
-        saved_data[update_count - 1][item] = data[0][item]
-
-        var itemized_data_values = _.map(saved_data, function(eachdata) {
-            if (eachdata[item]) {
-              if (eachdata[item]['max_val'] > 0) {
-                return eachdata[item]['max_val']
-              } else {
-                return eachdata[item]['value']
-              }
-            }
-          })
-          // itemized_data[itemized_data.length - update_count]
+        var position_to_change = saved_data.length - (update_count)
+        saved_data[position_to_change][item] = data[0][item]
+        var updated_data = saved_data
       }
 
+      var itemized_data_values = _.map(updated_data, function(eachdata) {
+        if (eachdata[item] != undefined) {
+          if (eachdata[item]['max_val'] > 0) {
+            return eachdata[item]['max_val']
+          } else {
+            return eachdata[item]['value']
+          }
+        } else {
+          return 1;
+        }
+      })
 
 
-
-
+      // if type is undefined, they all share the same scale
       if (type == undefined) {
         if (maxVal == undefined) {
           maxVal = 0
@@ -347,6 +346,7 @@
           .range([0, radio * 0.90]);
 
       } else {
+        // else, type must be 'twin' and each has its own scale
         if (maxVal[itemIndex] == undefined) {
           maxVal[itemIndex] = 0
         }
@@ -358,33 +358,24 @@
 
     })
 
-    var all_previously_existing_items = Object.keys(existing_arcs)
 
-    if (update_count) {
-
-    } else {
-
-    }
-
+    // generate itemized values for scales
+    itemized_values = {}
     _.map(items, function(item, itemIndex) {
-        all_previously_existing_items.splice(all_previously_existing_items.indexOf(itemIndex.toString()), 1)
-        itemized_values = []
+
+        itemized_values[itemIndex] = []
 
         if (update_count == 0) {
-          var itemized_data = _.map(data, function(eachdata) {
-            return eachdata[item]
-          })
+          updated_data = data
         } else {
-
-          var itemized_data = _.map(saved_data, function(eachdata) {
-              return eachdata[item]
-            })
-            // itemized_data[itemized_data.length - update_count]
+          updated_data = saved_data
         }
-
+        var itemized_data = _.map(updated_data, function(eachdata) {
+          return eachdata[item]
+        })
 
         var pos = 0;
-        for (i = 2 * Math.PI; i > 0; i = i - 2 * Math.PI / divitions) {
+        for (i = 2 * Math.PI; pos < divitions; i = i - 2 * Math.PI / divitions) {
           if (itemized_data[pos] != undefined && typeof(itemized_data[pos]['value']) == 'number') {
             if (total_values[pos] == undefined) {
               total_values[pos] = 0
@@ -396,24 +387,21 @@
               value = scaleit[itemIndex](itemized_data[pos]['value'])
             }
 
-
             if (value < 0) {
-              value = -1 * value
-            }
-            var transparency = 1 - (1 - (pos - update_count) / (divitions))
-            if (transparency > 1) {
-              transparency = transparency - parseInt(transparency)
+              value = 0
             }
 
-            itemized_values.push({
-              "pos": i,
-              "i": pos,
+            var decrease_transparency = ((pos + update_count) / (divitions))
+            decrease_transparency = decrease_transparency - parseInt(decrease_transparency)
+
+            itemized_values[itemIndex].push({
+              "i": i,
+              "pos": pos,
               "item": item,
               "itemIndex": itemIndex,
               "value": value,
               "previousValue": total_values[pos],
-              //"transparency": 0.7
-              "transparency": 1 - transparency + 0.3
+              "transparency": 1  - decrease_transparency + 0.3
             })
             total_values[pos] = total_values[pos] + value
           }
@@ -426,173 +414,123 @@
         }
 
 
-        function paint_arcs(itemized_values, radio, to_rotate, itemIndex, server_name) {
-          if (type == undefined) {
-            var arc = d3.svg.arc()
-              .innerRadius(function(d) {
-                // return d.previousValue
-                return d.previousValue;
-              })
-              .outerRadius(function(d) {
-                return d.value + d.previousValue;
-              })
-              .startAngle(function(d) {
-                return d.pos
-              })
-              .endAngle(function(d) {
-                return d.pos + 2 * Math.PI / (divitions)
-              });
-          } else {
-            var arc = d3.svg.arc()
-              .innerRadius(function(d) {
-                // return d.previousValue
-                return 0;
-              })
-              .outerRadius(function(d) {
-                return d.value;
-              })
-              .startAngle(function(d) {
-                return d.pos + (2 * Math.PI / (divitions) / 2) * (d.itemIndex - 1)
-              })
-              .endAngle(function(d) {
-                return d.pos + 2 * Math.PI / (divitions) / 2 + (2 * Math.PI / (divitions) / 2) * (d.itemIndex - 1)
-              });
-          }
-
-          itemized_values_indexed[itemIndex] = itemized_values
-          console.log('itemized_values_indexed')
-          console.log(itemized_values_indexed)
-          all_itemized_values = []
-          _.each(itemized_values_indexed, function(each_itemized_values){
-            _.each(each_itemized_values, function(each_each){
-              all_itemized_values.push(each_each)
-            })
-          })
-          console.log('all_itemized_values.length')
-          console.log(all_itemized_values.length)
-          console.log(all_itemized_values)
-
-          var all_itemized_values = [
-            {
-              "pos": 0,
-              "i": 0,
-              "item": 'carlos',
-              "itemIndex": 0,
-              "value": 200,
-              "previousValue": 0,
-              "transparency": 0.5
-            },
-            {
-              "pos": 1,
-              "i": 1,
-              "item": 'carlos',
-              "itemIndex": 0,
-              "value": 300,
-              "previousValue": 0,
-              "transparency": 0.5
-            },
-            {
-              "pos": 2,
-              "i": 2,
-              "item": 'carlos',
-              "itemIndex": 1,
-              "value": 200,
-              "previousValue": 100,
-              "transparency": 0.5
-            },
-            {
-              "pos": 3,
-              "i": 3,
-              "item": 'carlos',
-              "itemIndex": 1,
-              "value": 200,
-              "previousValue": 100,
-              "transparency": 0.5
-            }
-          ]
-
-          console.log(existing_arcs)
-          var svg_container = svgContainer.selectAll("g").data(all_itemized_values, function(d, i) {
-            //console.log(i)
-            return i
-            return d.item+d.i
-          })
-
-
-          svg_container.enter().append('path')
-            .attr("d", arc).attr("opacity", function(d) {
-              // console.log("adding new: ")
-              // console.log(d)
-              return d.transparency
-            })
-            .attr("transform", "translate(" + radio + "," + radio + ") rotate(" + to_rotate + ") ")
-            .attr('fill', assigned_colors[itemIndex])
-            .on('click', function(d) {
-              console.log(d)
-            })
-
-            console.log('svgContainer.selectAll("g")')
-            console.log(svgContainer.selectAll("g").data(all_itemized_values))
-            console.log('svg_container.enter()')
-            console.log(svg_container.enter())
-
-          // existing_arcs[itemIndex]
-          //   .transition()
-          //   .duration(1000)
-          //   .attr("d", arc).attr("opacity", function(d) {
-          //     return d.transparency
-          //   })
-          //   .attr("transform", "translate(" + radio + "," + radio + ") rotate(" + to_rotate + ") ")
-          //   .attr('fill', assigned_colors[itemIndex]);
-
-          svg_container.exit().transition()
-          .remove();
-
-
-
-          // if (previously_itemized_values[itemIndex] == null) {
-          //   existing_arcs[itemIndex] = svgContainer.selectAll("g").data(itemized_values, function(d) {
-          //       return d.pos
-          //     }).enter().append('path')
-          //     .attr("d", arc).attr("opacity", function(d) {
-          //       return d.transparency
-          //     })
-          //     .attr("transform", "translate(" + radio + "," + radio + ") rotate(" + to_rotate + ") ")
-          //     .attr('fill', assigned_colors[itemIndex])
-          //     .on('click', function(d) {
-          //       console.log(d)
-          //     })
-          //
-          //   previously_itemized_values[itemIndex] = itemized_values
-          // } else {
-          //
-          //
-          //   existing_arcs[itemIndex].data(itemized_values).transition()
-          //     .duration(1000)
-          //     .attr("d", arc).attr("opacity", function(d) {
-          //       return d.transparency
-          //     })
-          //     .attr("transform", "translate(" + radio + "," + radio + ") rotate(" + to_rotate + ") ")
-          //     .attr('fill', assigned_colors[itemIndex]);
-          //
-          //
-          // }
-
-        }
-
-        paint_arcs(itemized_values, radio, to_rotate, itemIndex, item)
 
       })
-      // if (update_count == 0) {
-      //   _.each(all_previously_existing_items, function(each) {
-      //     existing_arcs[each].data([]).exit()
-      //       .transition()
-      //       .attr("opacity", 0)
-      //   })
-      // }
 
 
+      function paint_arcs(itemized_values, radio, to_rotate) {
+        if (type == undefined) {
+          var arc = d3.svg.arc()
+            .innerRadius(function(d) {
+              // return d.previousValue
+              return d.previousValue;
+            })
+            .outerRadius(function(d) {
+              return d.value + d.previousValue;
+            })
+            .startAngle(function(d) {
+              return d.i
+            })
+            .endAngle(function(d) {
+              return d.i + 2 * Math.PI / (divitions)
+            });
+        } else {
+          var arc = d3.svg.arc()
+            .innerRadius(function(d) {
+              return 0;
+            })
+            .outerRadius(function(d) {
+              return d.value;
+            })
+            .startAngle(function(d) {
+              return d.i + (2 * Math.PI / (divitions) / 2) * (d.itemIndex - 1)
+            })
+            .endAngle(function(d) {
+              return d.i + 2 * Math.PI / (divitions) / 2 + (2 * Math.PI / (divitions) / 2) * (d.itemIndex - 1)
+            });
+        }
 
+        // console.log('itemized_values_indexed')
+        // console.log(itemized_values_indexed)
+        // console.log('items.length')
+        // console.log(items)
+        // console.log(items.length)
+        // console.log('itemized_values_indexed.length')
+        // console.log(Object.keys(itemized_values_indexed))
+        // console.log(Object.keys(itemized_values_indexed).length)
+
+        // var deleting_length = Object.keys(itemized_values_indexed).length
+        // for(i = items.length ; i < deleting_length ; i++){
+        //   console.log(i)
+        //   console.log('deleting: '+i)
+        //   delete itemized_values_indexed[i]
+        // }
+
+        // console.log('itemized_values_indexed')
+        // console.log(Object.keys(itemized_values_indexed))
+
+        all_itemized_values = []
+        _.each(itemized_values, function(each_itemized_values) {
+          _.each(each_itemized_values, function(each_each) {
+            all_itemized_values.push(each_each)
+          })
+        });
+
+        /// copying functioning one
+        var svgarcs = svgContainer.selectAll("path")
+
+        arcs = svgarcs.data(all_itemized_values, function(d) {
+          return "" + d.pos + d.itemIndex
+        });
+
+        // UPDATE
+        // Update old elements as needed.
+        arcs.attr("class", "update")
+          .transition()
+          .duration(1000)
+          .attr("d", arc)
+          .attr("transform", "rotate(" + to_rotate + ") ")
+          .delay(function(d) {
+            return d.pos * 10
+          })
+          .attr("opacity", function(d) {
+            return d.transparency
+          })
+
+        // ENTER
+        // Create new elements as needed.
+        arcs.enter().append('path')
+          .attr('fill', function(d) {
+            return assigned_colors[d.itemIndex]
+          })
+          .attr("transform", "rotate(" + to_rotate + ") ")
+          .attr("opacity", function(d) {
+            return d.transparency
+          })
+          .on('click', function(d) {
+            console.log(d)
+          })
+          .transition()
+          .delay(function(d) {
+            return d.pos * 10
+          })
+          .attr("d", arc)
+          .attr("opacity", function(d) {
+            return d.transparency
+          })
+
+        // EXIT
+        // Remove old elements as needed.
+        arcs.exit()
+          .attr("class", "exit")
+          .transition()
+          .duration(3000)
+          .attr("opacity", 0)
+          .remove();
+
+      }
+
+      paint_arcs(itemized_values, radio, to_rotate)
 
   }
 
@@ -680,8 +618,11 @@
 
   function get_of(server_list, server_keys, hours, type, colors, fake_hours) {
     var update_count = -1
-    clearTimeout(pending_timeout)
+    _.each(pending_timeouts, function(each_timeout) {
+      clearTimeout(each_timeout)
+    })
     var count = 1
+    var orig_nvalues
     var trigger_get_of = function(update) {
 
       _.each(server_list, function(value, list_key, list) {
@@ -690,9 +631,18 @@
         var nvalues
         if (update) {
           nvalues = 1
+          if (fake_hours > 1) {
+            nvalues = fake_hours
+          }
         } else {
           nvalues = (120 * hours)
+          orig_nvalues = nvalues
         }
+        if (update_count > orig_nvalues) {
+          update_count = 0;
+        }
+
+
         var url = "http://longview.carlosguerrero.com:8090/get/" + value + "/" + nvalues
         console.log(url)
         d3.json(url, function(err, server_logs) {
@@ -704,7 +654,11 @@
             _.each(server_keys, function(each_server_key) {
 
               if (fake_hours > 0) {
-                rate = hours / fake_hours // 4
+                if (update) {
+                  rate = fake_hours // 4
+                } else {
+                  rate = hours / fake_hours // 4
+                }
 
                 var summingit = 0
                 var count = 0
@@ -761,34 +715,39 @@
 
           servers_logs = process_logs(server_logs, servers_logs)
 
-          if (update_count > 0) {
-            //if(server_list.length == servers_logs.length){
-            generateBall(servers_logs, config.ball_radius, 1, type, colors, update_count)
-              //}
-          } else {
-            setTimeout(function(){
-              generateBall(servers_logs, config.ball_radius, 1, type, colors, update_count)
-            }, 2000*count)
-            count ++
-          }
+          // if (update_count > 0) {
+          //if(server_list.length == servers_logs.length){
+          console.log(Object.keys(servers_logs[0]).length)
+          console.log(server_list.length)
+            // if(Object.keys(servers_logs[0]).length == server_list.length){
+          generateBall(servers_logs, config.ball_radius, 1, type, colors, update_count)
 
-
+          // }
+          //}
+          // } else {
+          //   // setTimeout(function(){
+          //     generateBall(servers_logs, config.ball_radius, 1, type, colors, update_count)
+          //   // }, 2000*count)
+          // }
 
 
         })
 
-        if (update_count > nvalues) {
-          update_count = 1;
-        }
+
       })
 
-      // var pending_timeout = setTimeout(function() {
+      if (fake_hours > 1) {
+        var update_seconds = 30 * fake_hours
+      } else {
+        var update_seconds = 30
+      }
+
+      // pending_timeouts.push(setTimeout(function() {
       //   console.log("triggering automatic update... get of")
       //   trigger_get_of(true)
-      // }, 30000)
+      // }, update_seconds * 1000))
+
       update_count++
-
-
 
     }
 
@@ -796,22 +755,7 @@
 
   }
 
-  function get_all_last_hour_bandwidth2() {
-    server_list = _.map(user.services[0].servers, function(each) {
-        return each.longview
-      })
-      //server_list = [server_list[0]]
-      //server_list = [server_list[0]]
-      server_list = [server_list[0], server_list[1]]
-    get_of(server_list, ['tx_Kbps'], 1, undefined, main_colors)
-  }
 
-  function get_all_last_day_bandwidth2() {
-    server_list = _.map(user.services[0].servers, function(each) {
-      return each.longview
-    })
-    get_of(server_list, ['tx_Kbps'], 2, undefined, main_colors)
-  }
 
 
 
@@ -1073,6 +1017,7 @@
                         })
                         .attr("height", 10);
                       var local_result
+
                       labels_container[key].data(servers_graphs_array, function(d) {
                           return d.longview
                         }).transition()
@@ -1243,6 +1188,25 @@
       update_values_every(30, service.servers, 'load', 0)
 
     })
+  }
+
+  function get_all_last_hour_bandwidth2() {
+    server_list = _.map(user.services[0].servers, function(each) {
+        return each.longview
+      })
+      //server_list = [server_list[0]]
+      //server_list = [server_list[0]]
+    server_list = server_list.slice(1, 4)
+    get_of(server_list, ['tx_Kbps'], 1, undefined, main_colors)
+  }
+
+  function get_all_last_day_bandwidth2() {
+    server_list = _.map(user.services[0].servers, function(each) {
+      return each.longview
+    })
+    server_list = server_list.slice(1, 4)
+
+    get_of(server_list, ['tx_Kbps'], 2, undefined, main_colors, 2)
   }
 
   window.onload = function() {
