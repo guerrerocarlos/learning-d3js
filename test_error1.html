@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<header>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BigView</title>
+  <link rel="stylesheet" href="css/foundation.css">
+  <link rel="stylesheet" href="css/app.css">
+</header>
+<script src="d3.v3.min.js" charset="utf-8"></script>
+<script src="underscore.js" charset="utf-8"></script>
+<script src="generateArcs.js" charset="utf-8"></script>
+
+<script>
+  var assigned_colors = ["#a50026", "#d73027", "#f46d43", "#fdae61", "#fee08b", "#ffffbf", "#d9ef8b", "#a6d96a", "#66bd63", "#1a9850", "#00aa00", "rgb(255, 215, 0)"]
+  var main_colors = ['#800026',
+    '#bd0026',
+    '#e31a1c',
+    '#fc4e2a',
+    '#fd8d3c',
+    '#feb24c',
+    '#fed976',
+    '#ffeda0',
+    '#ffffcc', "#f7fbff", "#deebf7", "#c6dbef", "#9ecae1", "#6baed6", "#4292c6", "#2171b5", "#08519c", "#08306b", '#3f007d',
+    '#54278f',
+    '#6a51a3',
+    '#807dba',
+    '#9e9ac8',
+    '#bcbddc',
+    '#dadaeb',
+    '#efedf5',
+    '#fcfbfd'
+  ]
+
+
+  function randomArray(length, max) {
+    return Array.apply(null, Array(length)).map(function(_, i) {
+      return Math.round(Math.random() * max);
+    });
+  }
+
+  var flag = ['#00441b',
+      '#006d2c',
+      '#238b45',
+      '#41ab5d',
+      '#74c476',
+      '#a1d99b',
+      '#c7e9c0',
+      '#e5f5e0',
+      '#f7fcf5'
+    ]
+    //var main_colors = ["#df65b0","#e7298a","#ce1256","#980043"]
+
+
+  var svgContainer = d3.select("body").append("svg")
+    .attr("width", 600)
+    .attr("height", 600)
+    .style("margin-top", 20)
+    .append("g")
+      .attr("transform", "translate(300,300)");
+
+
+function check_error(){
+  var arc = d3.svg.arc()
+    .innerRadius(function(d) {
+      // return d.previousValue
+      return 0;
+    })
+    .outerRadius(function(d) {
+      return d.value ;
+    })
+    .startAngle(function(d) {
+      return d.pos
+    })
+    .endAngle(function(d) {
+      return d.pos + 2 * Math.PI / d.divitions
+    });
+    var radio = 300;
+    var to_rotate = 0;
+
+    setInterval(function(){
+          //radio = radio + 100
+          //to_rotate = to_rotate + 100
+
+          generateArcs(100*Math.random())
+
+          // var Gs = svgContainer.selectAll("path")
+          // console.log(Gs)
+          // console.log(itemized_values)
+          //
+          // var gss = Gs.data(itemized_values);
+          // console.log(gss)
+
+            // gss.transition().attr("d", arc)
+            // .duration(3750)
+            //
+            // gss.enter().append('path')
+            // .attr("d", arc).attr("opacity", function(d) {
+            //   return d.transparency
+            // })
+            // .attr('fill', 'red')
+            //
+            // .transition()
+            // .delay(function(d){return d.delay})
+            // .duration(2000)
+            // .attr('fill', 'blue')
+
+            /// copying functioning one
+            var svgarcs = svgContainer.selectAll("path")
+            console.log(svgarcs)
+
+            arcs = svgarcs.data(itemized_values, function(d){ return d.count });
+            console.log(arcs)
+
+
+            // UPDATE
+            // Update old elements as needed.
+            arcs.attr("class", "update")
+              .transition()
+                .duration(750)
+                .attr("d", arc)
+
+            // ENTER
+            // Create new elements as needed.
+            arcs.enter().append('path')
+            .attr("d", arc)
+            .attr('fill', 'grey')
+
+              .transition()
+              .attr("d", arc)
+
+            // EXIT
+            // Remove old elements as needed.
+            arcs.exit()
+                .attr("class", "exit")
+              .transition()
+                .duration(2000)
+                .style("opacity", 1e-6)
+                .remove();
+
+
+
+          // gss.exit().remove();
+    }, 3000)
+
+
+}
+
+
+  window.onload = function() {
+    check_error()
+  }
+</script>
+
+<body style="background-color:black;">
+  <button id="change1" type="button" class="alert button">24h</button>
+  <button id="allbandwidth" type="button" class="alert button">All</button>
+</body>
