@@ -40,13 +40,26 @@
     });
   }
 
-  var flag = ['#00441b',
+  var flag_prev = ['#00441b',
     '#006d2c',
     '#238b45',
     '#41ab5d',
     '#74c476',
-
   ]
+
+  var flag = [ '#7f2704',
+  '#a63603',
+  '#d94801',
+  '#f16913',
+  '#fd8d3c',
+  '#fdae6b',
+  '#fdd0a2',
+  '#fee6ce' ]
+
+  var cpu_colors = ["#fcbba1","#fc9272","#ef3b2c","#a50f15"].reverse()
+
+  var ram_colors = ["#ffffe5","#fff7bc","#fec44f","#fe9929"].reverse()
+
   var frozen_flag = [
     '#757575',
     '#858585',
@@ -579,44 +592,44 @@
       servers: [{
         longview: '88F48041-B897-A5FB-88B706D42D45A501',
         ip: '104.236.217.11',
-        pm2: 'holaproxy1'
+        pm2: 'multiproxy1'
 
       }, {
         longview: '88F48041-B897-A5FB-88B706D42D45A502',
         ip: '45.55.142.113',
-        pm2: 'holaproxy2'
+        pm2: 'multiproxy2'
       }, {
         longview: '88F48041-B897-A5FB-88B706D42D45A503',
         ip: '45.55.143.55',
-        pm2: 'holaproxy3'
+        pm2: 'multiproxy3'
       }, {
         longview: '88F48041-B897-A5FB-88B706D42D45A504',
         ip: '45.55.148.71',
-        pm2: 'holaproxy4'
+        pm2: 'multiproxy4'
       }, {
         longview: '88F48041-B897-A5FB-88B706D42D45A505',
         ip: '45.55.195.244',
-        pm2: 'holaproxy5'
+        pm2: 'multiproxy5'
       }, {
         longview: '88F48041-B897-A5FB-88B706D42D45A506',
         ip: '45.55.199.172',
-        pm2: 'holaproxy6'
+        pm2: 'multiproxy6'
       }, {
         longview: '88F48041-B897-A5FB-88B706D42D45A507',
         ip: '104.236.32.175',
-        pm2: 'holaproxy7'
+        pm2: 'multiproxy7'
       }, {
         longview: '88F48041-B897-A5FB-88B706D42D45A508',
         ip: '104.236.81.74',
-        pm2: 'holaproxy8'
+        pm2: 'multiproxy8'
       }, {
         longview: '88F48041-B897-A5FB-88B706D42D45A509',
         ip: '104.236.84.129',
-        pm2: 'holaproxy9'
+        pm2: 'multiproxy9'
       }, {
         longview: '88F48041-B897-A5FB-88B706D42D45A510',
         ip: '104.236.85.122',
-        pm2: 'holaproxy10'
+        pm2: 'multiproxy10'
       }]
     }]
   }
@@ -849,11 +862,9 @@
       .attr("font-size", "20px")
       .attr("fill", "white")
 
-
     _.each(user.services, function(service) {
-      servers_vertical_separation = 80
 
-      var tree_container = treeContainer.selectAll("text.server").data(service.servers)
+      var tree_container = treeContainerServers.selectAll("text").data(service.servers)
         .enter().append('g').append('text')
 
       var textLabels = tree_container
@@ -882,7 +893,7 @@
         .attr("fill", "grey")
 
 
-      var tree_container_colors = treeContainer.selectAll("rect.server").data(service.servers)
+      var tree_container_colors = treeContainerColors.selectAll("rect").data(service.servers)
         .enter().append('rect')
 
       tree_container_colors
@@ -905,11 +916,32 @@
         .delay(function(d, i) {
           return i * 20
         })
-        .attr('height', 79)
+        .attr('height', servers_vertical_separation - 2)
 
+        var tree_container_colors = treeContainerColors2.selectAll("rect").data(service.servers)
+          .enter().append('rect')
 
-
-
+        tree_container_colors
+          .attr('x', function(d,i) { return 5})
+          .attr('y', function(d, i) {
+            return servers_vertical_separation + servers_vertical_separation * i + 33
+          })
+          .attr('height', 0)
+          .attr('width', 15)
+          .style('fill', function(d, i) {
+            return main_colors[i]
+          })
+          .on('click', function(d, i) {
+            console.log('click 1')
+            arcs_colors = [main_colors[i]]
+            server_list = [d.longview]
+            update_circle_graph()
+          })
+          .transition()
+          .delay(function(d, i) {
+            return i * 20
+          })
+          .attr('height', 5)
 
 
       // servers graphs
@@ -969,12 +1001,18 @@
             if (type != undefined && type.indexOf('text') > -1) {
 
             } else {
-              tree_container[key] = treeContainer.selectAll("bar." + key).data(servers_graphs_array, function(d) {
+              if(tree_container[key] == undefined){
+                tree_container[key] = treeContainerSVG.append('g');
+              }
+
+               this_tree_container = tree_container[key].selectAll("rect").data(servers_graphs_array, function(d) {
                   return d.longview
                 })
+
+                this_tree_container
                 .enter().append('rect')
 
-              tree_container[key].attr("x", 150)
+              this_tree_container.attr("x", 150)
                 .attr("y", function(d, i) {
                   return 45 + servers_vertical_separation * i;
                 })
@@ -989,26 +1027,33 @@
                   update_circle_graph()
                 })
 
-              labels_container[key] = treeContainer.selectAll("label." + key).data(servers_graphs_array, function(d) {
+                if(labels_container[key] == undefined){
+                  labels_container[key] = treeContainerSVG.append('g');
+                }
+
+              this_labels_containers = labels_container[key].selectAll("text").data(servers_graphs_array, function(d) {
                   return d.longview
                 })
                 .enter().append('text').attr("font-size", "8.5px")
 
 
-              labels_container[key].attr("x", -500)
+              this_labels_containers.attr("x", -500)
                 .attr("y", function(d, i) {
                   return 45 + servers_vertical_separation * i;
                 })
                 .attr('text-anchor', 'end')
 
+                if(alerts_container[key] == undefined){
+                  alerts_container[key] = treeContainerSVG.append('g');
+                }
 
-              alerts_container[key] = treeContainer.selectAll("text.alert").data(servers_graphs_array, function(d) {
+              this_alert_container = alerts_container[key].selectAll("text").data(servers_graphs_array, function(d) {
                   return d.longview
                 })
                 .enter().append('text').attr("font-size", "8.5px")
 
 
-              alerts_container[key].attr("x", -500)
+              this_alert_container.attr("x", -500)
                 .attr("y", function(d, i) {
                   return 45 + servers_vertical_separation * i;
                 })
@@ -1049,7 +1094,7 @@
                           servers_graphs_array.push(each)
                         })
                         //
-                      tree_container[key].data(servers_graphs_array, function(d) {
+                      tree_container[key].selectAll("rect").data(servers_graphs_array, function(d) {
                           return d.longview
                         })
                         .transition().attr("x", 150)
@@ -1067,7 +1112,7 @@
                               return (d.Memory_swap_used / memory_total * bar_max_width)
                             }
                             if (key.indexOf('Kbps') > -1) {
-                              return d[key] / 100000 * bar_max_width
+                              return d[key] / 120000 * bar_max_width
                             }
                             return d[key] * bar_max_width
                           } else {
@@ -1079,7 +1124,6 @@
                           var samples_ago = parseInt(((d.request_timestamp / 1000) - parseInt(d.server_timestamp / 1000)) / 30) - 1
                           var bar_colors = flag
                           if(samples_ago > 1){
-                            console.log('frozen flag!')
                             bar_colors = frozen_flag
                           }
                           if (key.indexOf('load') > -1) {
@@ -1101,7 +1145,7 @@
                         .attr("height", 10);
                       var local_result
 
-                      labels_container[key].data(servers_graphs_array, function(d) {
+                      labels_container[key].selectAll("text").data(servers_graphs_array, function(d) {
                           return d.longview
                         }).transition()
                         .attr("y", function(d, i) {
@@ -1118,7 +1162,7 @@
                               return 150 + (d.Memory_swap_used / memory_total * bar_max_width)
                             }
                             if (key.indexOf('Kbps') > -1) {
-                              return 150 + d[key] / 100000 * bar_max_width
+                              return 150 + d[key] / 120000 * bar_max_width
                             }
                             if (key.indexOf('load') > -1) {
                               return 150 + d[key] * bar_max_width
@@ -1150,7 +1194,7 @@
                             val = 1
                           }
 
-                          if (val > 80) {
+                          if (val > 100) {
                             return 'end'
                           } else {
                             return 'start'
@@ -1218,19 +1262,13 @@
                         details.push("Opened ports: " + ports_better_data_text)
                         details.push("IP: " + user.services[0].servers[pos]['ip'])
 
-
                         if (details_list_containers[this_server] == undefined) {
-                          details_list_containers[this_server] = treeContainer.selectAll("text.details" + this_server)
-                            .data(details)
-                            .enter().append('text')
-
-                          this_details_list_container = details_list_containers[this_server]
-                        } else {
-                          this_details_list_container = details_list_containers[this_server]
-                            .data(details).transition()
+                          details_list_containers[this_server] = treeContainerSVG.append('g');
                         }
 
-                        this_details_list_container.attr("y", 10).attr("font-size", "9px")
+                        this_details_list = details_list_containers[this_server].selectAll("text")
+
+                        this_details_list.attr("y", 10).attr("font-size", "9px")
                           .attr("x", function(d, i) {
                             return 20
                           })
@@ -1243,11 +1281,27 @@
                           .text(function(d) {
                             return d
                           })
+
+                        this_details_list.data(details)
+                          .enter().append('text').attr("y", 10).attr("font-size", "9px")
+                            .attr("x", function(d, i) {
+                              return 20
+                            })
+                            .attr("y", function(d, i) {
+                              //return 50 + servers_vertical_separation * i + (10 * order);
+
+                              return pos * servers_vertical_separation + 68 + 10 + 10 * i
+                            })
+                            .style("fill", 'white')
+                            .text(function(d) {
+                              return d
+                            })
+
                           // .append("svg:title").text(function(d){return d.name + " ("+d.type+" "+d.ip+":"+d.port+") "+d.user });
                       }
                       if (type.indexOf('alerts') > -1) {
 
-                        alerts_container[key].data(servers_graphs_array, function(d) {
+                        alerts_container[key].selectAll('text').data(servers_graphs_array, function(d) {
                             return d.longview
                           })
                           .transition()
@@ -1270,20 +1324,11 @@
                             } else {
                               return ''
                             }
-
                           })
-
                       }
-
                     }
-
-
                   }
-
-
                 })
-
-
               })
           })
 
@@ -1374,64 +1419,388 @@
 
   }
 
-function pm2_list(){
+var pms_gs = []
+var process_lists = []
+var pm2_servers_list
+var pm2_graphs = {}
 
-        /// copying functioning one
-        var svgarcs = svgContainer.selectAll("path")
+function update_pm2(){
+  servers = user.services[0].servers
+  pm2_servers_list =  _.map(servers, function(each_server){ return each_server.pm2 })
 
-        arcs = svgarcs.data(all_itemized_values, function(d) {
-          return "" + d.pos + d.itemIndex
-        });
+  _.each(servers, function(server, itemIndex, list){
+    var pm2_name = server.pm2
+    var nvalues = 240
 
-        arcs.attr("class", "update")
-          .transition()
-          .duration(effects_duration1)
-          .attr("d", arc)
-          .attr("transform", "rotate(" + to_rotate + ") ")
-          .delay(function(d) {
-            return d.pos * 10
-          })
-          .attr("opacity", function(d) {
-            return d.transparency
-          })
-          .attr('fill', function(d) {
-            return assigned_colors[d.itemIndex]
-          })
+    if(pms_gs[pm2_name] == undefined){
+      pms_gs[pm2_name] = treeContainerSVG.append('g');
+    }
+    var url = "http://longview.carlosguerrero.com:8090/pm/get/" + pm2_name + "/" + nvalues
+    console.log(url)
+    d3.json(url, function(err, server_logs) {
 
-        // ENTER
-        // Create new elements as needed.
-        arcs.enter().append('path')
-          .attr('fill', function(d) {
-            return assigned_colors[d.itemIndex]
-          })
-          .attr("transform", "rotate(" + to_rotate + ") ")
-          .attr("opacity", function(d) {
-            return d.transparency
-          })
-          .on('click', function(d, i) {
-            arcs_colors = [main_colors[d.itemIndex]]
-            server_list = [d.item.split('__')[0]]
-            update_circle_graph()
-          })
-          .transition()
-          .delay(function(d) {
-            return d.pos * 10
-          })
-          .attr("d", arc)
-          .attr("opacity", function(d) {
-            return d.transparency
-          })
+      function show_pm2_data(server_log){
+        var pm2_name = server_log.data.server_name
+        if(process_lists[pm2_name] == undefined){
+          process_lists[pm2_name] = pms_gs[pm2_name].append('g')
+        }
+        var pos = pm2_servers_list.indexOf(pm2_name)
+        console.log(server_log)
 
-        // EXIT
-        // Remove old elements as needed.
-        arcs.exit()
-          .attr("class", "exit")
-          .transition()
-          .duration(effects_duration3)
-          .attr("opacity", 0)
-          .remove();
+        var processes_from_pm2 = server_log.data.status.data.process
+        _.each(processes_from_pm2, function(each_process_from_pm2){
+          each_process_from_pm2.total_mem = server_log.data.status.data.server.total_mem
+        })
 
+        var columns_colors = ['#777', '#555', '#444', '#333', '#222', '#111']
+
+        var process_columns [
+          {
+            name: 'color1',
+            fill: function(d,i){ return  cpu_colors[i+1] }
+          },
+          {
+            name: 'cpubackground',
+            fill: columns_colors[1],
+            text: function(d,i){
+              return (d.cpu) + '%'
+            },
+           attrs: [{'font-size': '10px'}]
+          },
+          {
+
+          }
+        ]
+
+        this_process_lists = process_lists[pm2_name].selectAll('rect#color1').data(processes_from_pm2)
+        this_process_lists.enter().append('rect')
+        .attr('class', 'color1')
+        .attr('x', 20)
+        .attr('y', function(d,i){
+          return 130 + servers_vertical_separation * pos + i*13
+        })
+        .attr('width', 27)
+        .attr('height', 12)
+
+        .attr('fill', function(d,i){ return  cpu_colors[i+1] })
+
+        this_process_lists = process_lists[pm2_name].selectAll('rect#cpubackground').data(processes_from_pm2)
+        this_process_lists.enter().append('rect')
+        .attr('class', 'cpubackground')
+        .attr('x', 50)
+        .attr('y', function(d,i){
+          return 130 + servers_vertical_separation * pos + i*13
+        })
+        .attr('width', 30)
+        .attr('height', 12)
+        .attr('fill', '#777')
+
+        this_process_lists = process_lists[pm2_name].selectAll('text#cpu').data(processes_from_pm2)
+        this_process_lists.enter().append('text')
+        .attr('class', 'mem')
+        .text(function(d,i){
+          return (d.cpu) + '%'
+        })
+        .attr('fill', function(d,i){
+          if(d.cpu > 90){
+            return 'white';
+          } else {
+            return '#eee';
+          }
+        })
+        .attr("font-size", "10px")
+        .attr('x', 55)
+        .attr('y', function(d,i){
+          return 140 + servers_vertical_separation * pos + i*13
+        })
+
+
+
+
+
+
+
+        this_process_lists = process_lists[pm2_name].selectAll('rect#membackground').data(processes_from_pm2)
+        this_process_lists.enter().append('rect')
+        .attr('class', 'membackground')
+        .attr('x', 80)
+        .attr('y', function(d,i){
+          return 130 + servers_vertical_separation * pos + i*13
+        })
+        .attr('width', 70)
+        .attr('height', 12)
+        .attr('fill', '#555')
+
+
+
+
+
+
+        this_process_lists = process_lists[pm2_name].selectAll('text#mem').data(processes_from_pm2)
+        this_process_lists.enter().append('text')
+        .attr('class', 'mem')
+        .text(function(d,i){
+          return (d.memory / 1024 / 1024).toFixed(0) + 'Mb (' + (d.memory / d.total_mem * 100).toFixed(0) + '%)  '
+        })
+        .attr('fill', 'white')
+        .attr("font-size", "10px")
+        .attr('x', 83)
+        .attr('y', function(d,i){
+          return 140 + servers_vertical_separation * pos + i*13
+        })
+
+
+        this_process_lists = process_lists[pm2_name].selectAll('rect#interpreter').data(processes_from_pm2)
+        this_process_lists.enter().append('rect')
+        .attr('class', 'interpreter')
+        .attr('x', 150)
+        .attr('y', function(d,i){
+          return 130 + servers_vertical_separation * pos + i*13
+        })
+        .attr('width', 100)
+        .attr('height', 12)
+        .attr('fill', '#444')
+
+        console.log(processes_from_pm2)
+        this_process_lists = process_lists[pm2_name].selectAll('text#interpreter').data(processes_from_pm2)
+
+        this_process_lists.enter().append('text')
+        .attr('class', 'info')
+        .text(function(d,i){
+          return d.interpreter + ' ' + d.name
+        })
+        .attr('fill', 'white')
+        .attr("font-size", "9px")
+        .attr('x', 153)
+        .attr('y', function(d,i){
+          return 140 + servers_vertical_separation * pos + i*13
+        })
+
+
+        this_process_lists = process_lists[pm2_name].selectAll('rect#info').data(processes_from_pm2)
+        this_process_lists.enter().append('rect')
+        .attr('class', 'info')
+        .attr('x', 250)
+        .attr('y', function(d,i){
+          return 130 + servers_vertical_separation * pos + i*13
+        })
+        .attr('width', 210)
+        .attr('height', 12)
+        .attr('fill', '#333')
+
+        console.log(processes_from_pm2)
+        this_process_lists = process_lists[pm2_name].selectAll('text#info').data(processes_from_pm2)
+
+        this_process_lists.enter().append('text')
+        .attr('class', 'info')
+        .text(function(d,i){
+          return ' ['+d.versioning.branch+'] "'+d.versioning.comment+'" '+ ''
+        })
+        .attr('fill', 'white')
+        .attr("font-size", "8px")
+        .attr('x', 253)
+        .attr('y', function(d,i){
+          return 140 + servers_vertical_separation * pos + i*13
+        })
+
+        this_process_lists = process_lists[pm2_name].selectAll('rect#commitid').data(processes_from_pm2)
+        this_process_lists.enter().append('rect')
+        .attr('class', 'commitid')
+        .attr('x', 460)
+        .attr('y', function(d,i){
+          return 130 + servers_vertical_separation * pos + i*13
+        })
+        .attr('width', 34)
+        .attr('height', 12)
+        .attr('fill', '#222')
+
+        console.log(processes_from_pm2)
+        this_process_lists = process_lists[pm2_name].selectAll('text#commitid').data(processes_from_pm2)
+        this_process_lists.enter().append('text')
+        .attr('class', 'commitid')
+        .text(function(d,i){
+          return d.versioning.revision.substr(0,6)
+        })
+        .attr('fill', 'white')
+        .attr("font-size", "8px")
+        .attr('x', 463)
+        .attr('y', function(d,i){
+          return 140 + servers_vertical_separation * pos + i*13
+        })
+
+
+
+
+
+
+
+
+        // var tree_container_colors = treeContainerColors2.selectAll("rect").data(service.servers)
+        //   .enter().append('rect')
+        //
+        // tree_container_colors
+        //   .attr('x', function(d,i) { return 5})
+        //   .attr('y', function(d, i) {
+        //     return servers_vertical_separation + servers_vertical_separation * i + 33
+        //   })
+        //   .attr('height', 0)
+        //   .attr('width', 15)
+        //   .style('fill', function(d, i) {
+        //     return main_colors[i]
+        //   })
+        //   .on('click', function(d, i) {
+        //     console.log('click 1')
+        //     arcs_colors = [main_colors[i]]
+        //     server_list = [d.longview]
+        //     update_circle_graph()
+        //   })
+        //   .transition()
+        //   .delay(function(d, i) {
+        //     return i * 20
+        //   })
+        //   .attr('height', 5)
+
+
+
+      }
+
+      function graph_pm2_data(data, type, color, name, stroke_width, defined_max, column){
+        console.log(data)
+
+        console.log('min')
+        console.log(d3.min(data, function(d) { return d.x; }) )
+
+        console.log('max')
+        console.log(d3.max(data, function(d) { return d.x; }) )
+
+
+        console.log('max2')
+        console.log(d3.max(data, function(d) { return d.y; }) )
+
+        var x = d3.scale.linear()
+            .domain([d3.min(data, function(d) { return d.x; }), d3.max(data, function(d) { return d.x; })])
+            .range([0, 350]);
+
+            if(defined_max == undefined){
+              var y = d3.scale.linear()
+                  .domain([0, d3.max(data, function(d) { return d.y; })])
+                  .range([100, 0]);
+
+            } else {
+              var y = d3.scale.linear()
+                  .domain([0, defined_max])
+                  .range([100, 0]);
+            }
+
+        if(type.indexOf('area') > -1){
+          var graph = d3.svg.area()
+          //.interpolate("linear")
+              .x(function(d) { return x(d.x); })
+              .y0(100)
+              .y1(function(d) { return y(d.y); });
+
+        } else {
+          var graph = d3.svg.line()
+            .x(function(d) { return x(d.x); })
+            .y(function(d) { return y(d.y); })
+            .interpolate("linear");
+        }
+
+        var pm2_name = name
+        var pos = pm2_servers_list.indexOf(name)
+
+        console.log('column')
+        console.log(column)
+        if(pm2_graphs[pm2_name+column]==undefined){
+          pm2_graphs[pm2_name+column] = pms_gs[pm2_name].append('g')
+          .attr("transform", "translate(" + (500 + 400*column)  + "," + (servers_vertical_separation * pos + 60) + ")");
+        }
+
+        console.log('pm2_graphs')
+        console.log(pm2_graphs)
+
+
+        var graphed = pm2_graphs[pm2_name+column].append("path")
+        .datum(data)
+        .attr("d", graph)
+
+        if(type.indexOf('area') == -1){
+          graphed.attr("stroke", color)
+          .attr("stroke-width", stroke_width)
+          .attr("fill", "none");
+        } else {
+          graphed//.attr("stroke", color)
+          .attr("fill", color)
+          .attr("opacity", 0.5);
+        }
+
+      }
+
+      show_pm2_data(server_logs[0])
+
+      var top_line = [{x: 0, y:1}, {x:1, y:1}]
+      graph_pm2_data(top_line, 'line', 'grey', server_logs[0].data.server_name, 2, 1, 0)
+      graph_pm2_data(top_line, 'line', 'grey', server_logs[0].data.server_name, 2, 1, 1)
+
+
+      var data_to_graph = _.map(server_logs, function(each_log){
+        return {x: each_log.sent_at, y: each_log.data.monitoring.loadavg[0]}
+      })
+      graph_pm2_data(data_to_graph, 'line', cpu_colors[0], server_logs[0].data.server_name, 2, 1, 0)
+
+
+      var data_to_graph = _.map(server_logs, function(each_log){
+        return {x: each_log.sent_at, y: each_log.data.monitoring.loadavg[1]}
+      })
+      graph_pm2_data(data_to_graph, 'area', 'url(#blueGradient)', server_logs[0].data.server_name, 2, 1, 0)
+      //graph_pm2_data(data_to_graph, 'line', 'blue', server_logs[0].data.server_name, 2, 1)
+
+
+
+      // var data_to_graph = _.map(server_logs, function(each_log){
+      //   return {x: each_log.sent_at, y: each_log.data.monitoring.loadavg[1]}
+      // })
+      // graph_pm2_data(data_to_graph, 'line', '#2171b5', server_logs[0].data.server_name)
+      //
+      // var data_to_graph = _.map(server_logs, function(each_log){
+      //   return {x: each_log.sent_at, y: each_log.data.monitoring.loadavg[2]}
+      // })
+      // graph_pm2_data(data_to_graph, 'line', '#d94801', server_logs[0].data.server_name)
+
+      var data_to_graph = _.map(server_logs, function(each_log){
+        return {x: each_log.sent_at, y: 1 - (each_log.data.monitoring.free_mem) / each_log.data.monitoring.total_mem }
+      })
+      graph_pm2_data(data_to_graph, 'area', 'url(#greenGradient)', server_logs[0].data.server_name, 2, 1, 1)
+      //graph_pm2_data(data_to_graph, 'line', 'green', server_logs[0].data.server_name, 2, 1)
+
+
+      _.each(server_logs[0].data.status.data.process, function(process, index){
+
+        var data_to_graph = _.map(server_logs, function(each_log){
+          return {x: each_log.sent_at, y: each_log.data.status.data.process[index].cpu }
+        })
+        graph_pm2_data(data_to_graph, 'line', cpu_colors[2+index], server_logs[0].data.server_name, 1, 100, 0)
+
+
+        var data_to_graph = _.map(server_logs, function(each_log){
+          return {x: each_log.sent_at, y: each_log.data.status.data.process[index].memory }
+        })
+        var total_mem = server_logs[0].data.monitoring.total_mem
+        graph_pm2_data(data_to_graph, 'line', ram_colors[2+index], server_logs[0].data.server_name, 1, total_mem, 1)
+
+      })
+
+
+
+    })
+  })
+
+  console.log('fin')
 }
+
+var servers_vertical_separation = 160
+
+var pm2_colors = ['#cc4c02', '#2171b5', '#d94801', '#ce1256', '#ae017e']
 
 
   window.onload = function() {
@@ -1443,32 +1812,76 @@ function pm2_list(){
     });
 
     //The SVG Container
-    treeContainer = d3.select("#treeContainer").append("svg:svg")
-      .attr("width", 600)
-      .attr("height", 100 + user.services[0].servers.length * 80);
+    treeContainerSVG = d3.select("#treeContainer").append("svg:svg")
+      .attr("width", 1200)
+      .attr("height", 100 + user.services[0].servers.length * servers_vertical_separation)
 
-    console.log(treeContainer)
+    treeContainer = treeContainerSVG.append('g');
+    treeContainerServers = treeContainerSVG.append('g');
+    treeContainerColors = treeContainerSVG.append('g');
+    treeContainerColors2 = treeContainerSVG.append('g');
+    treeContainerBar = treeContainerSVG.append('g');
+    treeContainerL2 = treeContainerSVG.append('g');
+
+
+
+
+
     svgContainerSVG = d3.select("#svgContainer").append("svg")
       .attr("width", 600)
       .attr("height", 700)
       .style("margin-top", 20)
       .style("vertical-align", 'top')
 
-    pm2Container = d3.select("#pm2Container").append("svg:svg")
-      .attr("width", 600)
-      .attr("height", 100 + user.services[0].servers.length * 80);
-
-    pm2ContainerL1 = svgContainerSVG
-      .append("g")
-
     svgContainer = svgContainerSVG
       .append("g")
       .attr("transform", "translate(300,300)");
+
+
     svgContainerLayer2 = svgContainerSVG
       .append("g")
       .attr("transform", "translate(300,300)");
 
-    pm2_list()
+      var gradient = svgContainerSVG.append("defs")
+        .append("linearGradient")
+          .attr("id", "blueGradient")
+          .attr("x1", "100%")
+          .attr("y1", "0%")
+          .attr("x2", "100%")
+          .attr("y2", "150%")
+          //.attr("spreadMethod", "pad");
+
+      gradient.append("stop")
+          .attr("offset", "30%")
+          .attr("stop-color", cpu_colors[0])
+          .attr("stop-opacity", 1);
+
+      gradient.append("stop")
+          .attr("offset", "100%")
+          .attr("stop-color", cpu_colors[0])
+          .attr("stop-opacity", 0);
+
+      var gradient = svgContainerSVG.append("defs")
+        .append("linearGradient")
+          .attr("id", "greenGradient")
+          .attr("x1", "100%")
+          .attr("y1", "0%")
+          .attr("x2", "100%")
+          .attr("y2", "150%")
+          //.attr("spreadMethod", "pad");
+
+
+
+          gradient.append("stop")
+              .attr("offset", "20%")
+              .attr("stop-color", ram_colors[0])
+              .attr("stop-opacity", 1);
+
+      gradient.append("stop")
+          .attr("offset", "100%")
+          .attr("stop-color", ram_colors[0])
+          .attr("stop-opacity", 0);
+
 
 
 
@@ -1510,6 +1923,7 @@ function pm2_list(){
 
     nodes_tree(600, 600)
     update_circle_graph()
+    update_pm2()
 
   }
 </script>
@@ -1517,40 +1931,41 @@ function pm2_list(){
 <body style="background-color:black;">
 
 
+
+
   <div class="row">
-    <div class="small-5 large-5 columns">
-      <div id="treeContainer" style="display:inline;"></div>
-    </div>
-    <div class="small-6 large-7 columns">
+
+    <div class="small-6 large-7 large-centered columns">
+
 
       <div class="row">
-        <div class="large-6 columns" style="margin-top: 40px;">
-          <button id="change24" style="display:inline;" type="button" class="alert button">24h</button>
+        <div class="large-12 columns large-centered">
+          <div id="svgContainer" class="large-centered" style="display:inline;margin-left:35px;"> </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="large-12 columns large-centered">
+          <button id="change24" type="button" class="alert button">24h</button>
           <button id="change12" type="button" class="alert button">12h</button>
           <button id="change1" type="button" class="alert button">1h</button>
-        </div>
-        <div class="large-6 columns" style="margin-top: 40px;">
           <button id="all" type="button" class="button">All Servers</button>
+          <button id="changetoout" type="button" class="alert button">Kbps Out</button>
+          <button id="changetoin" type="button" class="alert button">Kbps In</button>
+          <button id="changecpu" type="button" class="alert button">CPU</button>
+          <button id="changetoram" type="button" class="alert button">RAM</button>
         </div>
       </div>
 
-      <div class="row">
-        <div class="large-12 columns">
-          <div id="svgContainer" style="display:inline;"> </div>
-        </div>
-      </div>
-
-
-      <div class="row">
-        <div class="large-12 columns">
-          <div id="pm2Container" style="display:inline;"> </div>
-        </div>
-      </div>
     </div>
   </div>
 
 
-
+  <div class="row">
+    <div class="small-12 large-12 columns">
+      <div id="treeContainer" style="display:inline;"></div>
+    </div>
+  </div>
 
 
 </body>
