@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+se m<!DOCTYPE html>
 <header>
   <meta charset="utf-8">
   <meta http-equiv="x-ua-compatible" content="ie=edge">
@@ -9,9 +9,21 @@
 </header>
 <script src="d3.v3.min.js" charset="utf-8"></script>
 <script src="underscore.js" charset="utf-8"></script>
+<script src="socket.io.js"></script>
 
 <script>
-  var main_colors = ["#a50026", "#d73027", "#f46d43", "#fdae61", "#fee08b", "#ffffbf", "#d9ef8b", "#a6d96a", "#66bd63", "#1a9850", "#00aa00", "rgb(255, 215, 0)"]
+
+
+  var socket = io('http://longview.carlosguerrero.com:3030');
+
+  function randomArray(length, max) {
+    return Array.apply(null, Array(length)).map(function(_, i) {
+      return Math.round(Math.random() * max);
+    });
+  }
+
+  // var main_colors = ["#df65b0","#e7298a","#ce1256","#980043"]
+
   var main_colors = [
     '#800026',
     '#bd0026',
@@ -21,7 +33,17 @@
     '#feb24c',
     '#fed976',
     '#ffeda0',
-    '#ffffcc', "#EDF0F3", "#deebf7", "#c6dbef", "#9ecae1", "#6baed6", "#4292c6", "#2171b5", "#08519c", "#08306b", '#3f007d',
+    '#ffffcc',
+    "#f2f2cf",
+    "#deebf7",
+    "#c6dbef",
+    "#9ecae1",
+    "#6baed6",
+    "#4292c6",
+    "#2171b5",
+    "#08519c",
+    "#08306b",
+    '#3f007d',
     '#54278f',
     '#6a51a3',
     '#807dba',
@@ -34,12 +56,6 @@
 
   var arcs_colors = main_colors
 
-  function randomArray(length, max) {
-    return Array.apply(null, Array(length)).map(function(_, i) {
-      return Math.round(Math.random() * max);
-    });
-  }
-
   var flag_prev = ['#00441b',
     '#006d2c',
     '#238b45',
@@ -47,33 +63,30 @@
     '#74c476',
   ]
 
-  var flag = [ '#7f2704',
-  '#a63603',
-  '#d94801',
-  '#f16913',
-  '#fd8d3c',
-  '#fdae6b',
-  '#fdd0a2',
-  '#fee6ce' ]
-
-  var cpu_colors = ["#fcbba1","#fc9272","#ef3b2c","#a50f15"].reverse()
-
-  var ram_colors = ["#ffffe5","#fff7bc","#fec44f","#fe9929"].reverse()
-
-  var frozen_flag = [
-    '#757575',
-    '#858585',
-    '#959595',
-    '#a5a5a5'
+  var flag = ['#7f2704',
+    '#a63603',
+    '#d94801',
+    '#f16913',
+    '#fd8d3c',
+    '#fdae6b',
+    '#fdd0a2',
+    '#fee6ce'
   ]
 
+  var cpu_colors = ["#7fc97f", "#beaed4", "#fdc086", "#ffff99", "#386cb0", "#f0027f", "#bf5b17", "#1400ff", "#0cf20e", "#ff0000", "#a50f15"].reverse()
+  var ram_colors = ["#ffffb3", "#8dd3c7", "#fb8072", "#80b1d3", "#fdb462", "#b3de69", "#fccde5", "#ff00fc", "#00d1ff", "#ffff0a", "#fe9929"].reverse()
+
+  var frozen_flag = [ '#757575', '#858585', '#959595', '#a5a5a5' ]
+
   var flag_dict = {
-      'load': '#00441b',
+      'load':             '#00441b',
       'Memory_real_used': '#006d2c',
-      'rx_Kbps': '#238b45',
-      'tx_Kbps': '#41ab5d',
+      'rx_Kbps':          '#238b45',
+      'tx_Kbps':          '#41ab5d',
     }
-    //var main_colors = ["#df65b0","#e7298a","#ce1256","#980043"]
+
+  var pm2_colors = ['#cc4c02', '#2171b5', '#d94801', '#ce1256', '#ae017e']
+
 
   var local_ihours = 1
   var last_ihours = false
@@ -133,7 +146,7 @@
   }
 
   // automatically update every second the updating yellow
-  function start_or_restart_updating_dot(){
+  function start_or_restart_updating_dot() {
     clearInterval(seconds_interval)
     seconds_interval = setInterval(function() {
       // console.log(second_count)
@@ -147,9 +160,9 @@
         seconds_circle_color = 'yellow'
       }
       if (selected_hours == 24) {
-        var to_rotate = -180 + update_cicle_percentage() * 360 + show_updating_little_ahead
+        var to_rotate = -180 + update_cicle_percentage() * 360
       } else {
-        var to_rotate = update_cicle_percentage() * 360 + show_updating_little_ahead
+        var to_rotate = update_cicle_percentage() * 360
       }
       seconds_circle
         .attr('fill', seconds_circle_color)
@@ -170,9 +183,7 @@
       var scaleit = []
     }
 
-
-
-    show_updating_little_ahead = 1
+    var show_updating_little_ahead = 1
 
     var to_rotate = update_cicle_percentage() * 360 + show_updating_little_ahead
 
@@ -198,15 +209,9 @@
         .attr("transform", "rotate(" + to_rotate + ") ")
     }
 
-
-
     start_or_restart_updating_dot()
 
     background_painted = true
-
-
-
-
 
     // paint hour marks
     if (last_ihours != ihours) {
@@ -237,7 +242,6 @@
       } else {
 
         var hours = _.range(ihours);
-        console.log(hours)
         var hours_positions = _.map(hours, function(hour) {
           var angle = hour / ihours * 2 * Math.PI;
           if (ihours == 12) {
@@ -249,7 +253,7 @@
           var text = hour + ':00'
           if (ihours == 12) {
             var text = hour + ''
-            if(text.indexOf('10') == -1){
+            if (text.indexOf('10') == -1) {
               text = text.replace('0', '12')
             }
           }
@@ -671,15 +675,7 @@
 
           time_right_now = parseInt(new Date().getTime() / 1000)
           seconds_passed = time_right_now - last_timeout_executed
-          console.log('seconds_passed')
-          console.log(seconds_passed)
-
-          console.log('update_seconds')
-          console.log(update_seconds)
-
           missed_intervals = parseInt(seconds_passed / update_seconds) - 1
-          console.log('missed_intervals')
-          console.log(missed_intervals)
           nvalues = nvalues * (1 + missed_intervals)
           start_or_restart_updating_dot()
 
@@ -805,7 +801,7 @@
                   console.log('aja')
                   console.log(each)
                   servers_logs.shift();
-                  generateBall(servers_logs, config.ball_radius, hours, type, colors, update_count + key+1)
+                  generateBall(servers_logs, config.ball_radius, hours, type, colors, update_count + key + 1)
                 })
                 update_count = update_count + missed_intervals
               }
@@ -918,30 +914,32 @@
         })
         .attr('height', servers_vertical_separation - 2)
 
-        var tree_container_colors = treeContainerColors2.selectAll("rect").data(service.servers)
-          .enter().append('rect')
+      var tree_container_colors = treeContainerColors2.selectAll("rect").data(service.servers)
+        .enter().append('rect')
 
-        tree_container_colors
-          .attr('x', function(d,i) { return 5})
-          .attr('y', function(d, i) {
-            return servers_vertical_separation + servers_vertical_separation * i + 33
-          })
-          .attr('height', 0)
-          .attr('width', 15)
-          .style('fill', function(d, i) {
-            return main_colors[i]
-          })
-          .on('click', function(d, i) {
-            console.log('click 1')
-            arcs_colors = [main_colors[i]]
-            server_list = [d.longview]
-            update_circle_graph()
-          })
-          .transition()
-          .delay(function(d, i) {
-            return i * 20
-          })
-          .attr('height', 5)
+      tree_container_colors
+        .attr('x', function(d, i) {
+          return 5
+        })
+        .attr('y', function(d, i) {
+          return servers_vertical_separation + servers_vertical_separation * i + 33
+        })
+        .attr('height', 0)
+        .attr('width', 15)
+        .style('fill', function(d, i) {
+          return main_colors[i]
+        })
+        .on('click', function(d, i) {
+          console.log('click 1')
+          arcs_colors = [main_colors[i]]
+          server_list = [d.longview]
+          update_circle_graph()
+        })
+        .transition()
+        .delay(function(d, i) {
+          return i * 20
+        })
+        .attr('height', 5)
 
 
       // servers graphs
@@ -1001,15 +999,15 @@
             if (type != undefined && type.indexOf('text') > -1) {
 
             } else {
-              if(tree_container[key] == undefined){
+              if (tree_container[key] == undefined) {
                 tree_container[key] = treeContainerSVG.append('g');
               }
 
-               this_tree_container = tree_container[key].selectAll("rect").data(servers_graphs_array, function(d) {
-                  return d.longview
-                })
+              this_tree_container = tree_container[key].selectAll("rect").data(servers_graphs_array, function(d) {
+                return d.longview
+              })
 
-                this_tree_container
+              this_tree_container
                 .enter().append('rect')
 
               this_tree_container.attr("x", 150)
@@ -1027,9 +1025,9 @@
                   update_circle_graph()
                 })
 
-                if(labels_container[key] == undefined){
-                  labels_container[key] = treeContainerSVG.append('g');
-                }
+              if (labels_container[key] == undefined) {
+                labels_container[key] = treeContainerSVG.append('g');
+              }
 
               this_labels_containers = labels_container[key].selectAll("text").data(servers_graphs_array, function(d) {
                   return d.longview
@@ -1043,9 +1041,9 @@
                 })
                 .attr('text-anchor', 'end')
 
-                if(alerts_container[key] == undefined){
-                  alerts_container[key] = treeContainerSVG.append('g');
-                }
+              if (alerts_container[key] == undefined) {
+                alerts_container[key] = treeContainerSVG.append('g');
+              }
 
               this_alert_container = alerts_container[key].selectAll("text").data(servers_graphs_array, function(d) {
                   return d.longview
@@ -1123,7 +1121,7 @@
                           // var flag = ["#7f3b08","#b35806","#e08214","#fdb863","#fee0b6","#f7f7f7","#d8daeb","#b2abd2","#8073ac","#542788","#2d004b"]
                           var samples_ago = parseInt(((d.request_timestamp / 1000) - parseInt(d.server_timestamp / 1000)) / 30) - 1
                           var bar_colors = flag
-                          if(samples_ago > 1){
+                          if (samples_ago > 1) {
                             bar_colors = frozen_flag
                           }
                           if (key.indexOf('load') > -1) {
@@ -1284,20 +1282,20 @@
 
                         this_details_list.data(details)
                           .enter().append('text').attr("y", 10).attr("font-size", "9px")
-                            .attr("x", function(d, i) {
-                              return 20
-                            })
-                            .attr("y", function(d, i) {
-                              //return 50 + servers_vertical_separation * i + (10 * order);
+                          .attr("x", function(d, i) {
+                            return 20
+                          })
+                          .attr("y", function(d, i) {
+                            //return 50 + servers_vertical_separation * i + (10 * order);
 
-                              return pos * servers_vertical_separation + 68 + 10 + 10 * i
-                            })
-                            .style("fill", 'white')
-                            .text(function(d) {
-                              return d
-                            })
+                            return pos * servers_vertical_separation + 68 + 10 + 10 * i
+                          })
+                          .style("fill", 'white')
+                          .text(function(d) {
+                            return d
+                          })
 
-                          // .append("svg:title").text(function(d){return d.name + " ("+d.type+" "+d.ip+":"+d.port+") "+d.user });
+                        // .append("svg:title").text(function(d){return d.name + " ("+d.type+" "+d.ip+":"+d.port+") "+d.user });
                       }
                       if (type.indexOf('alerts') > -1) {
 
@@ -1315,10 +1313,10 @@
                             if ('request_timestamp' in d) {
                               var samples_ago = parseInt(((d.request_timestamp / 1000) - parseInt(d.server_timestamp / 1000)) / 30) - 1
                               if (samples_ago > 2) {
-                                if(samples_ago < 160){
+                                if (samples_ago < 160) {
                                   return 'DELAYED ' + parseInt(samples_ago / 2) + ' minutes'
                                 } else {
-                                  return 'DELAYED ' + (parseInt(samples_ago / 2)/60).toFixed(2) + ' hours'
+                                  return 'DELAYED ' + (parseInt(samples_ago / 2) / 60).toFixed(2) + ' hours'
                                 }
                               }
                             } else {
@@ -1419,388 +1417,364 @@
 
   }
 
-var pms_gs = []
-var process_lists = []
-var pm2_servers_list
-var pm2_graphs = {}
+  var pms_gs = []
+  var process_lists = []
+  var pm2_servers_list
+  var pm2_graphs = {}
+  var graphed = {}
+  var server_logs_array = {}
 
-function update_pm2(){
-  servers = user.services[0].servers
-  pm2_servers_list =  _.map(servers, function(each_server){ return each_server.pm2 })
+  function update_pm2() {
+    servers = user.services[0].servers
+    pm2_servers_list = _.map(servers, function(each_server) {
+      return each_server.pm2
+    })
 
-  _.each(servers, function(server, itemIndex, list){
-    var pm2_name = server.pm2
-    var nvalues = 240
+    function trigger_pm2_update(update){
+      console.log('trigger_pm2_update')
+      _.each(servers, function(server, itemIndex, list) {
+        var pm2_name = server.pm2
+        var nvalues = 240 * 2
+        var nvalues = 240
 
-    if(pms_gs[pm2_name] == undefined){
-      pms_gs[pm2_name] = treeContainerSVG.append('g');
-    }
-    var url = "http://longview.carlosguerrero.com:8090/pm/get/" + pm2_name + "/" + nvalues
-    console.log(url)
-    d3.json(url, function(err, server_logs) {
 
-      function show_pm2_data(server_log){
-        var pm2_name = server_log.data.server_name
-        if(process_lists[pm2_name] == undefined){
-          process_lists[pm2_name] = pms_gs[pm2_name].append('g')
+
+        if (pms_gs[pm2_name] == undefined) {
+          pms_gs[pm2_name] = treeContainerSVG.append('g');
         }
-        var pos = pm2_servers_list.indexOf(pm2_name)
-        console.log(server_log)
 
-        var processes_from_pm2 = server_log.data.status.data.process
-        _.each(processes_from_pm2, function(each_process_from_pm2){
-          each_process_from_pm2.total_mem = server_log.data.status.data.server.total_mem
-        })
+        var url = "http://longview.carlosguerrero.com:8090/pm/get/" + pm2_name + "/" + nvalues
+        console.log(url)
 
-        var columns_colors = ['#777', '#555', '#444', '#333', '#222', '#111']
 
-        var process_columns [
-          {
-            name: 'color1',
-            fill: function(d,i){ return  cpu_colors[i+1] }
-          },
-          {
-            name: 'cpubackground',
-            fill: columns_colors[1],
-            text: function(d,i){
-              return (d.cpu) + '%'
-            },
-           attrs: [{'font-size': '10px'}]
-          },
-          {
-
-          }
-        ]
-
-        this_process_lists = process_lists[pm2_name].selectAll('rect#color1').data(processes_from_pm2)
-        this_process_lists.enter().append('rect')
-        .attr('class', 'color1')
-        .attr('x', 20)
-        .attr('y', function(d,i){
-          return 130 + servers_vertical_separation * pos + i*13
-        })
-        .attr('width', 27)
-        .attr('height', 12)
-
-        .attr('fill', function(d,i){ return  cpu_colors[i+1] })
-
-        this_process_lists = process_lists[pm2_name].selectAll('rect#cpubackground').data(processes_from_pm2)
-        this_process_lists.enter().append('rect')
-        .attr('class', 'cpubackground')
-        .attr('x', 50)
-        .attr('y', function(d,i){
-          return 130 + servers_vertical_separation * pos + i*13
-        })
-        .attr('width', 30)
-        .attr('height', 12)
-        .attr('fill', '#777')
-
-        this_process_lists = process_lists[pm2_name].selectAll('text#cpu').data(processes_from_pm2)
-        this_process_lists.enter().append('text')
-        .attr('class', 'mem')
-        .text(function(d,i){
-          return (d.cpu) + '%'
-        })
-        .attr('fill', function(d,i){
-          if(d.cpu > 90){
-            return 'white';
+        socket.on('pm2-data-'+pm2_name, function(server_log){
+          if(server_logs_array[server_log.data.server_name] != undefined){
+            server_logs_array[server_log.data.server_name].pop()
+            server_logs_array[server_log.data.server_name].unshift(server_log)
           } else {
-            return '#eee';
+            server_logs_array[server_log.data.server_name] = []
+            server_logs_array[server_log.data.server_name].pop()
+            server_logs_array[server_log.data.server_name].unshift(server_log)
           }
-        })
-        .attr("font-size", "10px")
-        .attr('x', 55)
-        .attr('y', function(d,i){
-          return 140 + servers_vertical_separation * pos + i*13
+          // console.log(server_logs_array[server_log.data.server_name])
+          process_pm2_logs(null, server_logs_array[server_log.data.server_name])
         })
 
 
-
-
-
-
-
-        this_process_lists = process_lists[pm2_name].selectAll('rect#membackground').data(processes_from_pm2)
-        this_process_lists.enter().append('rect')
-        .attr('class', 'membackground')
-        .attr('x', 80)
-        .attr('y', function(d,i){
-          return 130 + servers_vertical_separation * pos + i*13
-        })
-        .attr('width', 70)
-        .attr('height', 12)
-        .attr('fill', '#555')
-
-
-
-
-
-
-        this_process_lists = process_lists[pm2_name].selectAll('text#mem').data(processes_from_pm2)
-        this_process_lists.enter().append('text')
-        .attr('class', 'mem')
-        .text(function(d,i){
-          return (d.memory / 1024 / 1024).toFixed(0) + 'Mb (' + (d.memory / d.total_mem * 100).toFixed(0) + '%)  '
-        })
-        .attr('fill', 'white')
-        .attr("font-size", "10px")
-        .attr('x', 83)
-        .attr('y', function(d,i){
-          return 140 + servers_vertical_separation * pos + i*13
+        d3.json(url, function(err, server_logs){
+          //if(server_logs_array[server_logs[0].data.server_name] != undefined){
+          //  server_logs_array[server_logs[0].data.server_name].unshift(server_logs)
+          //} else {
+          server_logs_array[server_logs[0].data.server_name] = server_logs
+          //}
+          process_pm2_logs(err, server_logs)
         })
 
 
-        this_process_lists = process_lists[pm2_name].selectAll('rect#interpreter').data(processes_from_pm2)
-        this_process_lists.enter().append('rect')
-        .attr('class', 'interpreter')
-        .attr('x', 150)
-        .attr('y', function(d,i){
-          return 130 + servers_vertical_separation * pos + i*13
-        })
-        .attr('width', 100)
-        .attr('height', 12)
-        .attr('fill', '#444')
-
-        console.log(processes_from_pm2)
-        this_process_lists = process_lists[pm2_name].selectAll('text#interpreter').data(processes_from_pm2)
-
-        this_process_lists.enter().append('text')
-        .attr('class', 'info')
-        .text(function(d,i){
-          return d.interpreter + ' ' + d.name
-        })
-        .attr('fill', 'white')
-        .attr("font-size", "9px")
-        .attr('x', 153)
-        .attr('y', function(d,i){
-          return 140 + servers_vertical_separation * pos + i*13
-        })
-
-
-        this_process_lists = process_lists[pm2_name].selectAll('rect#info').data(processes_from_pm2)
-        this_process_lists.enter().append('rect')
-        .attr('class', 'info')
-        .attr('x', 250)
-        .attr('y', function(d,i){
-          return 130 + servers_vertical_separation * pos + i*13
-        })
-        .attr('width', 210)
-        .attr('height', 12)
-        .attr('fill', '#333')
-
-        console.log(processes_from_pm2)
-        this_process_lists = process_lists[pm2_name].selectAll('text#info').data(processes_from_pm2)
-
-        this_process_lists.enter().append('text')
-        .attr('class', 'info')
-        .text(function(d,i){
-          return ' ['+d.versioning.branch+'] "'+d.versioning.comment+'" '+ ''
-        })
-        .attr('fill', 'white')
-        .attr("font-size", "8px")
-        .attr('x', 253)
-        .attr('y', function(d,i){
-          return 140 + servers_vertical_separation * pos + i*13
-        })
-
-        this_process_lists = process_lists[pm2_name].selectAll('rect#commitid').data(processes_from_pm2)
-        this_process_lists.enter().append('rect')
-        .attr('class', 'commitid')
-        .attr('x', 460)
-        .attr('y', function(d,i){
-          return 130 + servers_vertical_separation * pos + i*13
-        })
-        .attr('width', 34)
-        .attr('height', 12)
-        .attr('fill', '#222')
-
-        console.log(processes_from_pm2)
-        this_process_lists = process_lists[pm2_name].selectAll('text#commitid').data(processes_from_pm2)
-        this_process_lists.enter().append('text')
-        .attr('class', 'commitid')
-        .text(function(d,i){
-          return d.versioning.revision.substr(0,6)
-        })
-        .attr('fill', 'white')
-        .attr("font-size", "8px")
-        .attr('x', 463)
-        .attr('y', function(d,i){
-          return 140 + servers_vertical_separation * pos + i*13
-        })
+        function process_pm2_logs(err, server_logs) {
 
 
 
 
+          function show_pm2_data(server_log) {
+            var pm2_name = server_log.data.server_name
+            if (process_lists[pm2_name] == undefined) {
+              process_lists[pm2_name] = pms_gs[pm2_name].append('g')
+            }
+            var pos = pm2_servers_list.indexOf(pm2_name)
+
+            var processes_from_pm2 = server_log.data.status.data.process
+            _.each(processes_from_pm2, function(each_process_from_pm2) {
+              each_process_from_pm2.total_mem = server_log.data.status.data.server.total_mem
+            })
+
+            var process_columns_colors = ['#777', '#555', '#444', '#333', '#222', '#111']
+
+            var process_columns = [{
+              name: 'color1',
+              fill: function(d, i) {
+                return cpu_colors[i + 1]
+              },
+              width: 12,
+            }, {
+              name: 'cpu',
+              fill: process_columns_colors[1],
+              text: function(d, i) {
+                return (d.cpu) + '%'
+              },
+              width: 27,
+              rightmargin: 2
+
+            }, {
+              name: 'color2',
+              fill: function(d, i) {
+                return ram_colors[i + 1]
+              },
+              width: 12,
+            }, {
+              name: 'mem',
+              fill: process_columns_colors[2],
+              width: 70,
+              text: function(d, i) {
+                return (d.memory / 1024 / 1024).toFixed(0) + 'Mb (' + (d.memory / d.total_mem * 100).toFixed(0) + '%)  '
+              },
+              rightmargin: 2
+
+            }, {
+              name: 'process',
+              fill: process_columns_colors[4],
+              width: 89,
+              text: function(d, i) {
+                return d.interpreter + ' ' + d.name
+              },
+              rightmargin: 2
+
+            }, {
+              name: 'branch',
+              fill: process_columns_colors[2],
+              width: 45,
+              text: function(d, i) {
+                var text_value = d.versioning.branch
+                if (text_value.length > 9) {
+                  return text_value.substr(0, 7) + '...'
+                } else {
+                  return text_value
+                }
+              }
+            }, {
+              name: 'commitcomment',
+              fill: process_columns_colors[3],
+              width: 170,
+              text: function(d, i) {
+                var text_value = d.versioning.comment
+                var max_length = 35
+                if (text_value.length > max_length) {
+                  return text_value.substr(0, max_length - 4) + '...'
+                } else {
+                  return text_value
+                }
+              }
+            }, {
+              name: 'revision',
+              fill: process_columns_colors[2],
+              width: 45,
+              text: function(d, i) {
+                var text_value = d.versioning.revision
+                var max_length = 10
+                if (text_value.length > max_length) {
+                  return text_value.substr(0, max_length - 4)
+                } else {
+                  return text_value
+                }
+              }
+            }]
+
+            var xpos = 20
+            _.each(process_columns, function(process) {
+              this_process_lists = process_lists[pm2_name].selectAll('rect#' + process.name).data(processes_from_pm2)
+              this_process_lists.enter().append('rect')
+                .attr('class', process.name)
+                .attr('x', xpos)
+                .attr('y', function(d, i) {
+                  return 130 + servers_vertical_separation * pos + i * 13
+                })
+                .attr('width', process.width)
+                .attr('height', 12)
+                .attr('fill', process.fill)
+
+              if ('text' in process) {
+                this_process_lists = process_lists[pm2_name].selectAll('text#' + process.name).data(processes_from_pm2)
+                this_process_lists.enter().append('text')
+                  .attr('class', process.name)
+                  .text(process.text)
+                  .attr('fill', 'white')
+                  .attr('x', xpos + (process.width) / 2)
+                  .attr('text-anchor', 'middle')
+                  .attr('y', function(d, i) {
+                    return 140 + servers_vertical_separation * pos + i * 13
+                  })
+                  .attr("font-size", "10px")
+
+              }
+              xpos = xpos + process.width
+              if (process.rightmargin) {
+                xpos = xpos + process.rightmargin
+              }
+
+            })
 
 
+          }
 
+          function graph_pm2_data(data, type, color, name, stroke_width, defined_max, column, attrs, graph_name) {
 
-        // var tree_container_colors = treeContainerColors2.selectAll("rect").data(service.servers)
-        //   .enter().append('rect')
-        //
-        // tree_container_colors
-        //   .attr('x', function(d,i) { return 5})
-        //   .attr('y', function(d, i) {
-        //     return servers_vertical_separation + servers_vertical_separation * i + 33
-        //   })
-        //   .attr('height', 0)
-        //   .attr('width', 15)
-        //   .style('fill', function(d, i) {
-        //     return main_colors[i]
-        //   })
-        //   .on('click', function(d, i) {
-        //     console.log('click 1')
-        //     arcs_colors = [main_colors[i]]
-        //     server_list = [d.longview]
-        //     update_circle_graph()
-        //   })
-        //   .transition()
-        //   .delay(function(d, i) {
-        //     return i * 20
-        //   })
-        //   .attr('height', 5)
+            var x = d3.scale.linear()
+              .domain([d3.min(data, function(d) {
+                return d.x;
+              }), d3.max(data, function(d) {
+                return d.x;
+              })])
+              .range([0, 300]);
 
-
-
-      }
-
-      function graph_pm2_data(data, type, color, name, stroke_width, defined_max, column){
-        console.log(data)
-
-        console.log('min')
-        console.log(d3.min(data, function(d) { return d.x; }) )
-
-        console.log('max')
-        console.log(d3.max(data, function(d) { return d.x; }) )
-
-
-        console.log('max2')
-        console.log(d3.max(data, function(d) { return d.y; }) )
-
-        var x = d3.scale.linear()
-            .domain([d3.min(data, function(d) { return d.x; }), d3.max(data, function(d) { return d.x; })])
-            .range([0, 350]);
-
-            if(defined_max == undefined){
+            if (defined_max == undefined) {
               var y = d3.scale.linear()
-                  .domain([0, d3.max(data, function(d) { return d.y; })])
-                  .range([100, 0]);
+                .domain([0, d3.max(data, function(d) {
+                  return d.y;
+                })])
+                .range([100, 0]);
 
             } else {
               var y = d3.scale.linear()
-                  .domain([0, defined_max])
-                  .range([100, 0]);
+                .domain([0, defined_max])
+                .range([100, 0]);
             }
 
-        if(type.indexOf('area') > -1){
-          var graph = d3.svg.area()
-          //.interpolate("linear")
-              .x(function(d) { return x(d.x); })
-              .y0(100)
-              .y1(function(d) { return y(d.y); });
+            if (type.indexOf('area') > -1) {
+              var graph = d3.svg.area()
+                //.interpolate("linear")
+                .x(function(d) {
+                  return x(d.x);
+                })
+                .y0(100)
+                .y1(function(d) {
+                  return y(d.y);
+                });
 
-        } else {
-          var graph = d3.svg.line()
-            .x(function(d) { return x(d.x); })
-            .y(function(d) { return y(d.y); })
-            .interpolate("linear");
+            } else {
+              var graph = d3.svg.line()
+                .x(function(d) {
+                  return x(d.x);
+                })
+                .y(function(d) {
+                  return y(d.y);
+                })
+                .interpolate("linear");
+            }
+
+            var pm2_name = name
+            var pos = pm2_servers_list.indexOf(name)
+            var graph_key = "" + pm2_name + column + graph_name
+
+
+            if (pm2_graphs[pm2_name + column] == undefined) {
+              pm2_graphs[pm2_name + column] = pms_gs[pm2_name].append('g')
+                .attr("transform", "translate(" + (525 + 325 * column) + "," + (servers_vertical_separation * pos + 60) + ")");
+            }
+
+            if(graphed[graph_key] == undefined){
+              graphed[graph_key] = pm2_graphs[pm2_name + column].append("path")
+                .datum(data)
+                .attr("d", graph)
+            } else {
+              graphed[graph_key].datum(data).transition().duration(0).attr("d", graph)
+            }
+
+
+            if (type.indexOf('area') == -1) {
+              graphed[graph_key].attr("stroke", color)
+                .attr("stroke-width", stroke_width)
+                .attr("fill", "none");
+              _.each(attrs, function(attval, attkey) {
+                graphed[graph_key].attr(attkey, attval);
+              })
+            } else {
+              graphed[graph_key].attr("stroke", color)
+                .attr("stroke-width", stroke_width) //.attr("stroke", color)
+                .attr("fill", color)
+                .attr("opacity", 0.5);
+            }
+          }
+
+          show_pm2_data(server_logs[0])
+
+          if(update == undefined) {
+            var top_line = [{
+              x: 0,
+              y: 1
+            }, {
+              x: 1,
+              y: 1
+            }]
+            graph_pm2_data(top_line, 'line', 'grey', server_logs[0].data.server_name, 1, 1, 0, {
+              'stroke-dasharray': "5,10"
+            }, 'A')
+            graph_pm2_data(top_line, 'line', 'grey', server_logs[0].data.server_name, 1, 1, 1, {
+              'stroke-dasharray': "5,10"
+            }, 'B')
+          }
+
+          var data_to_graph = _.map(server_logs, function(each_log) {
+            return {
+              x: each_log.sent_at,
+              y: each_log.data.monitoring.loadavg[0]
+            }
+          })
+          graph_pm2_data(data_to_graph, 'line', cpu_colors[0], server_logs[0].data.server_name, 2, 1, 0,[], 'ALL_CPU_LINE')
+
+
+          var data_to_graph = _.map(server_logs, function(each_log) {
+            return {
+              x: each_log.sent_at,
+              y: each_log.data.monitoring.loadavg[1]
+            }
+          })
+          graph_pm2_data(data_to_graph, 'area', 'url(#blueGradient)', server_logs[0].data.server_name, 2, 1, 0,[], 'ALL_CPU')
+
+          var data_to_graph = _.map(server_logs, function(each_log) {
+            return {
+              x: each_log.sent_at,
+              y: 1 - (each_log.data.monitoring.free_mem) / each_log.data.monitoring.total_mem
+            }
+          })
+          graph_pm2_data(data_to_graph, 'area', 'url(#greenGradient)', server_logs[0].data.server_name, 2, 1, 1,[], 'ALL_MEM')
+          if(server_logs[0].data.server_name.indexOf('multiproxy3') > -1){
+            console.log('server_logs')
+            console.log(server_logs)
+          }
+          _.each(server_logs[0].data.status.data.process, function(process, index) {
+
+            var data_to_graph = _.map(server_logs, function(each_log) {
+              return {
+                x: each_log.sent_at,
+                y: each_log.data.status.data.process[index].cpu
+              }
+            })
+
+            if(server_logs[0].data.server_name.indexOf('multiproxy3') > -1){
+              console.log('data_to_graph')
+              console.log(data_to_graph)
+            }
+
+            graph_pm2_data(data_to_graph, 'line', cpu_colors[1 + index], server_logs[0].data.server_name, 0.25, 100, 0,[], 'CPU'+index)
+
+            var data_to_graph = _.map(server_logs, function(each_log) {
+              return {
+                x: each_log.sent_at,
+                y: each_log.data.status.data.process[index].memory
+              }
+            })
+            var total_mem = server_logs[0].data.monitoring.total_mem
+            graph_pm2_data(data_to_graph, 'line', ram_colors[1 + index], server_logs[0].data.server_name, 1, total_mem, 1,[], 'RAM'+index)
+
+          })
+
+
         }
-
-        var pm2_name = name
-        var pos = pm2_servers_list.indexOf(name)
-
-        console.log('column')
-        console.log(column)
-        if(pm2_graphs[pm2_name+column]==undefined){
-          pm2_graphs[pm2_name+column] = pms_gs[pm2_name].append('g')
-          .attr("transform", "translate(" + (500 + 400*column)  + "," + (servers_vertical_separation * pos + 60) + ")");
-        }
-
-        console.log('pm2_graphs')
-        console.log(pm2_graphs)
-
-
-        var graphed = pm2_graphs[pm2_name+column].append("path")
-        .datum(data)
-        .attr("d", graph)
-
-        if(type.indexOf('area') == -1){
-          graphed.attr("stroke", color)
-          .attr("stroke-width", stroke_width)
-          .attr("fill", "none");
-        } else {
-          graphed//.attr("stroke", color)
-          .attr("fill", color)
-          .attr("opacity", 0.5);
-        }
-
-      }
-
-      show_pm2_data(server_logs[0])
-
-      var top_line = [{x: 0, y:1}, {x:1, y:1}]
-      graph_pm2_data(top_line, 'line', 'grey', server_logs[0].data.server_name, 2, 1, 0)
-      graph_pm2_data(top_line, 'line', 'grey', server_logs[0].data.server_name, 2, 1, 1)
-
-
-      var data_to_graph = _.map(server_logs, function(each_log){
-        return {x: each_log.sent_at, y: each_log.data.monitoring.loadavg[0]}
       })
-      graph_pm2_data(data_to_graph, 'line', cpu_colors[0], server_logs[0].data.server_name, 2, 1, 0)
+      // setTimeout(function(){
+      //   trigger_pm2_update(true)
+      // }, 5000)
 
 
-      var data_to_graph = _.map(server_logs, function(each_log){
-        return {x: each_log.sent_at, y: each_log.data.monitoring.loadavg[1]}
-      })
-      graph_pm2_data(data_to_graph, 'area', 'url(#blueGradient)', server_logs[0].data.server_name, 2, 1, 0)
-      //graph_pm2_data(data_to_graph, 'line', 'blue', server_logs[0].data.server_name, 2, 1)
+    }
+    trigger_pm2_update()
 
 
+    console.log('fin')
+  }
 
-      // var data_to_graph = _.map(server_logs, function(each_log){
-      //   return {x: each_log.sent_at, y: each_log.data.monitoring.loadavg[1]}
-      // })
-      // graph_pm2_data(data_to_graph, 'line', '#2171b5', server_logs[0].data.server_name)
-      //
-      // var data_to_graph = _.map(server_logs, function(each_log){
-      //   return {x: each_log.sent_at, y: each_log.data.monitoring.loadavg[2]}
-      // })
-      // graph_pm2_data(data_to_graph, 'line', '#d94801', server_logs[0].data.server_name)
+  var servers_vertical_separation = 160
 
-      var data_to_graph = _.map(server_logs, function(each_log){
-        return {x: each_log.sent_at, y: 1 - (each_log.data.monitoring.free_mem) / each_log.data.monitoring.total_mem }
-      })
-      graph_pm2_data(data_to_graph, 'area', 'url(#greenGradient)', server_logs[0].data.server_name, 2, 1, 1)
-      //graph_pm2_data(data_to_graph, 'line', 'green', server_logs[0].data.server_name, 2, 1)
-
-
-      _.each(server_logs[0].data.status.data.process, function(process, index){
-
-        var data_to_graph = _.map(server_logs, function(each_log){
-          return {x: each_log.sent_at, y: each_log.data.status.data.process[index].cpu }
-        })
-        graph_pm2_data(data_to_graph, 'line', cpu_colors[2+index], server_logs[0].data.server_name, 1, 100, 0)
-
-
-        var data_to_graph = _.map(server_logs, function(each_log){
-          return {x: each_log.sent_at, y: each_log.data.status.data.process[index].memory }
-        })
-        var total_mem = server_logs[0].data.monitoring.total_mem
-        graph_pm2_data(data_to_graph, 'line', ram_colors[2+index], server_logs[0].data.server_name, 1, total_mem, 1)
-
-      })
-
-
-
-    })
-  })
-
-  console.log('fin')
-}
-
-var servers_vertical_separation = 160
-
-var pm2_colors = ['#cc4c02', '#2171b5', '#d94801', '#ce1256', '#ae017e']
 
 
   window.onload = function() {
@@ -1842,45 +1816,45 @@ var pm2_colors = ['#cc4c02', '#2171b5', '#d94801', '#ce1256', '#ae017e']
       .append("g")
       .attr("transform", "translate(300,300)");
 
-      var gradient = svgContainerSVG.append("defs")
-        .append("linearGradient")
-          .attr("id", "blueGradient")
-          .attr("x1", "100%")
-          .attr("y1", "0%")
-          .attr("x2", "100%")
-          .attr("y2", "150%")
-          //.attr("spreadMethod", "pad");
+    var gradient = svgContainerSVG.append("defs")
+      .append("linearGradient")
+      .attr("id", "blueGradient")
+      .attr("x1", "100%")
+      .attr("y1", "0%")
+      .attr("x2", "100%")
+      .attr("y2", "150%")
+      //.attr("spreadMethod", "pad");
 
-      gradient.append("stop")
-          .attr("offset", "30%")
-          .attr("stop-color", cpu_colors[0])
-          .attr("stop-opacity", 1);
+    gradient.append("stop")
+      .attr("offset", "30%")
+      .attr("stop-color", cpu_colors[0])
+      .attr("stop-opacity", 1);
 
-      gradient.append("stop")
-          .attr("offset", "100%")
-          .attr("stop-color", cpu_colors[0])
-          .attr("stop-opacity", 0);
+    gradient.append("stop")
+      .attr("offset", "100%")
+      .attr("stop-color", cpu_colors[0])
+      .attr("stop-opacity", 0);
 
-      var gradient = svgContainerSVG.append("defs")
-        .append("linearGradient")
-          .attr("id", "greenGradient")
-          .attr("x1", "100%")
-          .attr("y1", "0%")
-          .attr("x2", "100%")
-          .attr("y2", "150%")
-          //.attr("spreadMethod", "pad");
+    var gradient = svgContainerSVG.append("defs")
+      .append("linearGradient")
+      .attr("id", "greenGradient")
+      .attr("x1", "100%")
+      .attr("y1", "0%")
+      .attr("x2", "100%")
+      .attr("y2", "150%")
+      //.attr("spreadMethod", "pad");
 
 
 
-          gradient.append("stop")
-              .attr("offset", "20%")
-              .attr("stop-color", ram_colors[0])
-              .attr("stop-opacity", 1);
+    gradient.append("stop")
+      .attr("offset", "20%")
+      .attr("stop-color", ram_colors[0])
+      .attr("stop-opacity", 1);
 
-      gradient.append("stop")
-          .attr("offset", "100%")
-          .attr("stop-color", ram_colors[0])
-          .attr("stop-opacity", 0);
+    gradient.append("stop")
+      .attr("offset", "100%")
+      .attr("stop-color", ram_colors[0])
+      .attr("stop-opacity", 0);
 
 
 
@@ -1931,41 +1905,37 @@ var pm2_colors = ['#cc4c02', '#2171b5', '#d94801', '#ce1256', '#ae017e']
 <body style="background-color:black;">
 
 
-
-
-  <div class="row">
-
-    <div class="small-6 large-7 large-centered columns">
-
-
-      <div class="row">
-        <div class="large-12 columns large-centered">
-          <div id="svgContainer" class="large-centered" style="display:inline;margin-left:35px;"> </div>
-        </div>
-      </div>
-
-      <div class="row">
-        <div class="large-12 columns large-centered">
-          <button id="change24" type="button" class="alert button">24h</button>
-          <button id="change12" type="button" class="alert button">12h</button>
-          <button id="change1" type="button" class="alert button">1h</button>
-          <button id="all" type="button" class="button">All Servers</button>
-          <button id="changetoout" type="button" class="alert button">Kbps Out</button>
-          <button id="changetoin" type="button" class="alert button">Kbps In</button>
-          <button id="changecpu" type="button" class="alert button">CPU</button>
-          <button id="changetoram" type="button" class="alert button">RAM</button>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-
   <div class="row">
     <div class="small-12 large-12 columns">
       <div id="treeContainer" style="display:inline;"></div>
     </div>
   </div>
 
+
+    <div class="row">
+
+      <div class="small-6 large-7 large-centered columns">
+
+        <div class="row">
+          <div class="large-12 columns large-centered">
+            <div id="svgContainer" class="large-centered" style="display:inline;margin-left:35px;"> </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="large-12 columns large-centered">
+            <button id="change24" type="button" class="alert button">24h</button>
+            <button id="change12" type="button" class="alert button">12h</button>
+            <button id="change1" type="button" class="alert button">1h</button>
+            <button id="all" type="button" class="button">All Servers</button>
+            <button id="changetoout" type="button" class="alert button">Kbps Out</button>
+            <button id="changetoin" type="button" class="alert button">Kbps In</button>
+            <button id="changecpu" type="button" class="alert button">CPU</button>
+            <button id="changetoram" type="button" class="alert button">RAM</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
 
 </body>
