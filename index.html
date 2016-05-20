@@ -588,61 +588,121 @@ se m<!DOCTYPE html>
 
   }
 
+  var services_available = {
+    'proxydns': {
+      name: 'Carlos Guerrero',
+      services: [{
+        name: 'Mediahint 1',
+        servers: [
+          {
+          longview: '88F48041-B897-A5FB-88B706D42D45A201',
+          ip: '104.236.250.239',
+          pm2: 'devices001'
 
-  var user = {
+        },{
+          longview: '88F48041-B897-A5FB-88B706D42D45A501',
+          ip: '104.236.217.11',
+          pm2: 'multiproxy1'
+
+        }, {
+          longview: '88F48041-B897-A5FB-88B706D42D45A502',
+          ip: '45.55.142.113',
+          pm2: 'multiproxy2'
+        }, {
+          longview: '88F48041-B897-A5FB-88B706D42D45A503',
+          ip: '45.55.143.55',
+          pm2: 'multiproxy3'
+        }, {
+          longview: '88F48041-B897-A5FB-88B706D42D45A504',
+          ip: '45.55.148.71',
+          pm2: 'multiproxy4'
+        }, {
+          longview: '88F48041-B897-A5FB-88B706D42D45A505',
+          ip: '45.55.195.244',
+          pm2: 'multiproxy5'
+        }, {
+          longview: '88F48041-B897-A5FB-88B706D42D45A506',
+          ip: '45.55.199.172',
+          pm2: 'multiproxy6'
+        }, {
+          longview: '88F48041-B897-A5FB-88B706D42D45A507',
+          ip: '104.236.32.175',
+          pm2: 'multiproxy7'
+        }, {
+          longview: '88F48041-B897-A5FB-88B706D42D45A508',
+          ip: '104.236.81.74',
+          pm2: 'multiproxy8'
+        }, {
+          longview: '88F48041-B897-A5FB-88B706D42D45A509',
+          ip: '104.236.84.129',
+          pm2: 'multiproxy9'
+        }, {
+          longview: '88F48041-B897-A5FB-88B706D42D45A510',
+          ip: '104.236.85.122',
+          pm2: 'multiproxy10'
+        }]
+      }]
+    },
+  'mediahint': {
     name: 'Carlos Guerrero',
     services: [{
-      name: 'Mediahint',
+      name: 'Mediahint 2',
       servers: [
         {
-        longview: '88F48041-B897-A5FB-88B706D42D45A201',
-        ip: '104.236.250.239',
-        pm2: 'multiproxydevices001'
+        longview: '88F48041-B897-A5FB-88B706D42D45D001',
+        ip: '159.203.174.209',
+        pm2: 'deviproxy-01'
 
       },{
-        longview: '88F48041-B897-A5FB-88B706D42D45A501',
-        ip: '104.236.217.11',
-        pm2: 'multiproxy1'
+        longview: '88F48041-B897-A5FB-88B706D42D45A101',
+        ip: '162.243.217.93',
+        pm2: 'multiproxy-01'
 
       }, {
-        longview: '88F48041-B897-A5FB-88B706D42D45A502',
-        ip: '45.55.142.113',
-        pm2: 'multiproxy2'
+        longview: '88F48041-B897-A5FB-88B706D42D45A102',
+        ip: '107.170.40.228',
+        pm2: 'multiproxy-02'
       }, {
-        longview: '88F48041-B897-A5FB-88B706D42D45A503',
-        ip: '45.55.143.55',
-        pm2: 'multiproxy3'
+        longview: '88F48041-B897-A5FB-88B706D42D45A103',
+        ip: '107.170.54.235',
+        pm2: 'multiproxy-03'
       }, {
-        longview: '88F48041-B897-A5FB-88B706D42D45A504',
-        ip: '45.55.148.71',
-        pm2: 'multiproxy4'
+        longview: '88F48041-B897-A5FB-88B706D42D45A104',
+        ip: '107.170.69.65',
+        pm2: 'multiproxy-04'
       }, {
-        longview: '88F48041-B897-A5FB-88B706D42D45A505',
-        ip: '45.55.195.244',
-        pm2: 'multiproxy5'
+        longview: '88F48041-B897-A5FB-88B706D42D45A105',
+        ip: '107.170.72.202',
+        pm2: 'multiproxy-05'
       }, {
-        longview: '88F48041-B897-A5FB-88B706D42D45A506',
-        ip: '45.55.199.172',
-        pm2: 'multiproxy6'
+        longview: '88F48041-B897-A5FB-88B706D42D45A106',
+        ip: '107.170.75.83',
+        pm2: 'multiproxy-06'
       }, {
-        longview: '88F48041-B897-A5FB-88B706D42D45A507',
-        ip: '104.236.32.175',
-        pm2: 'multiproxy7'
+        longview: '88F48041-B897-A5FB-88B706D42D45A107',
+        ip: '107.170.75.99',
+        pm2: 'multiproxy-07'
       }, {
-        longview: '88F48041-B897-A5FB-88B706D42D45A508',
-        ip: '104.236.81.74',
-        pm2: 'multiproxy8'
-      }, {
-        longview: '88F48041-B897-A5FB-88B706D42D45A509',
-        ip: '104.236.84.129',
-        pm2: 'multiproxy9'
-      }, {
-        longview: '88F48041-B897-A5FB-88B706D42D45A510',
-        ip: '104.236.85.122',
-        pm2: 'multiproxy10'
+        longview: '88F48041-B897-A5FB-88B706D42D45A109',
+        ip: '107.170.75.110',
+        pm2: 'multiproxy-09'
       }]
     }]
   }
+
+}
+
+  var path = window.location.search.replace('/', '').replace('?','')
+  console.log('path', path)
+
+  if(path.indexOf('actual') == 0){
+    path = 'proxydns'
+  }
+  // if(path.length == 0){
+  //   path = 'proxydns'
+  // }
+  console.log('path', path)
+  var user = services_available[path]
 
   var config = {
     ball_radius: 300
